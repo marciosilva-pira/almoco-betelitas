@@ -53,7 +53,7 @@ export default function LoginPage() {
       await sendPasswordResetEmail(auth, email);
       setSucesso("E-mail de redefinição enviado com sucesso!");
       setEsquecendoSenha(false);
-    } catch (error) {
+    } catch (error: any) {
       setErro("Erro ao enviar e-mail. Verifique se o e-mail está correto.");
     } finally {
       setCarregando(false);
@@ -93,7 +93,17 @@ export default function LoginPage() {
       
       {erro && <div className="bg-red-50 text-red-600 border border-red-200 text-sm p-3 rounded-lg mb-4 text-center">{erro}</div>}
       
-      {sucesso && <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm p-4 rounded-lg mb-4 text-left font-bold">{sucesso}</div>}
+      {sucesso && (
+        <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm p-4 rounded-lg mb-4 text-left font-bold">
+          <p>{sucesso}</p>
+          {senhaTemporariaGerada && (
+            <div className="mt-3 p-3 bg-white border border-emerald-200 rounded text-center">
+              <p className="text-slate-500 font-normal text-xs mb-1">Senha temporária:</p>
+              <p className="text-2xl font-mono tracking-widest text-blue-600">{senhaTemporariaGerada}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={isCadastro ? handleCadastro : (esquecendoSenha ? handleEsqueciSenha : handleLogin)} className="space-y-4">
         <div>
@@ -101,7 +111,6 @@ export default function LoginPage() {
           <input type="email" required placeholder="exemplo@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"/>
         </div>
         
-        {/* Campo de senha: Visível apenas no Login normal ou se a conta acabou de ser criada */}
         {(!esquecendoSenha && (!isCadastro || senhaTemporariaGerada)) && (
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Senha</label>
