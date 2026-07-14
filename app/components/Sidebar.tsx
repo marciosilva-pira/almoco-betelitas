@@ -23,7 +23,8 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen">
+    
+    <aside className="w-64 bg-slate-900 text-white flex flex-col h-full">
 
       <div className="p-6 border-b border-slate-800 shrink-0">
         <h1 className="text-xl font-bold tracking-wide">🍽️ Almoço Betelitas</h1>
