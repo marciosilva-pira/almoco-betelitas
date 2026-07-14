@@ -35,16 +35,16 @@ export default function Dashboard() {
     if (!dataString) return "";
     const partes = dataString.split("-");
     if (partes.length !== 3) return dataString;
-    
+
     const meses = [
       "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
       "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     ];
-    
+
     const dia = partes[2];
     const mes = meses[parseInt(partes[1]) - 1];
     const ano = partes[0];
-    
+
     return `${dia} de ${mes} de ${ano}`;
   }
 
@@ -72,7 +72,7 @@ export default function Dashboard() {
   async function carregarDados() {
     try {
       setLoading(true);
-      
+
       const [casasSnapshot, betelitasSnapshot, programacoesSnapshot] = await Promise.all([
         getDocs(collection(db, "houses")),
         getDocs(collection(db, "betelitas")),
@@ -130,7 +130,7 @@ export default function Dashboard() {
         }
 
         const dataAgendada = dados.data || "";
-        
+
         // Reconstrói a lista de participantes do documento
         const listaParticipantesIds = dados.participantes || [];
         if (listaParticipantesIds.length === 0 && dados.statusParticipantes) {
@@ -187,7 +187,11 @@ export default function Dashboard() {
           const casa = dicionarioCasas[idProcurado];
           const casaNomeFamilia = casa ? (casa.nomeFamilia || "Sem Nome") : "Casa Não Cadastrada";
           const casaNumero = casa ? (casa.numeroCasa || "") : "N/A";
-          const endereco = casa ? (casa.endereco || "Endereço não disponível") : "";
+          const enderecoCompleto = casa
+            ? `${casa.logradouro || ""}, ${casa.numeroEndereço || "S/N"} - ${casa.bairro || ""}, ${casa.cidade || ""}`
+            : "Endereço não disponível";
+
+          const endereco = enderecoCompleto.replace(", ,", ",").replace(" - ,", "");
           const telefone = casa ? (casa.telefone || "Telefone não disponível") : "";
 
           const novosParticipantes = listaParticipantesIds.map((betelitaId: string) => {
@@ -307,11 +311,10 @@ export default function Dashboard() {
             return (
               <div
                 key={prog.id}
-                className={`rounded-2xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden transition-all ${
-                  isPrimeira
+                className={`rounded-2xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden transition-all ${isPrimeira
                     ? "bg-gradient-to-r from-slate-900 to-indigo-950 ring-2 ring-indigo-500/20"
                     : "bg-gradient-to-r from-slate-800 to-slate-900"
-                }`}
+                  }`}
               >
                 {/* Detalhe estético de fundo do prato com talheres */}
                 <div className="absolute right-0 bottom-0 opacity-5 translate-x-12 translate-y-12 select-none pointer-events-none">
