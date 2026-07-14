@@ -1,20 +1,11 @@
-import "./globals.css"; // Isso vai trazer de volta todo o design do Tailwind!
-import ActiveLayoutClient from "./ActiveLayoutClient";
+// app/layout.tsx
+import "./globals.css";
 
-export const metadata = {
-  title: "Almoço Betelitas",
-  description: "Sistema de gestão de almoços",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="antialiased text-slate-600 bg-slate-50">
-        <ActiveLayoutClient>{children}</ActiveLayoutClient>
+    <html lang="pt-br">
+      <body className="bg-gray-100 min-h-screen flex items-center justify-center">
+        {children}
       </body>
     </html>
   );
