@@ -1,0 +1,53 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "../../lib/firebase";
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // TROQUE AQUI PELO SEU E-MAIL QUE ESTÁ NO BANCO DE DADOS
+  const ADMIN_EMAIL = "marciosilva.pira@gmail.com"; 
+  const isAdmin = auth.currentUser?.email === ADMIN_EMAIL;
+
+  const isActive = (path: string) => {
+    return pathname === path ? "bg-blue-600/10 text-blue-400 font-medium" : "text-slate-400 hover:bg-slate-800 hover:text-white";
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/");
+  };
+
+  return (
+    <aside className="w-64 bg-slate-900 text-white flex flex-col shrink-0 h-screen">
+      <div className="p-6 border-b border-slate-800">
+        <h1 className="text-xl font-bold tracking-wide">🍽️ Almoço Betelitas</h1>
+      </div>
+
+      <nav className="p-4 space-y-1.5 flex-1">
+        <Link href="/dashboard" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/dashboard")}`}>
+          📊 Dashboard
+        </Link>
+
+        {/* Verificação direta pelo seu e-mail */}
+        {isAdmin && (
+          <>
+            <Link href="/casas" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/casas")}`}>🏠 Casas</Link>
+            <Link href="/betelitas" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/betelitas")}`}>👥 Betelitas</Link>
+            <Link href="/programacoes" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/programacoes")}`}>📅 Programações</Link>
+          </>
+        )}
+      </nav>
+
+      <div className="p-4 border-t border-slate-800">
+        <button onClick={handleLogout} className="w-full text-slate-400 p-3 text-sm hover:text-white">
+          🚪 Sair do Sistema
+        </button>
+      </div>
+    </aside>
+  );
+}
