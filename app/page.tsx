@@ -96,12 +96,12 @@ export default function LoginPage() {
       {sucesso && (
         <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm p-4 rounded-lg mb-4 text-left font-bold">
           <p>{sucesso}</p>
-          {senhaTemporariaGerada && (
-            <div className="mt-3 p-3 bg-white border border-emerald-200 rounded text-center">
-              <p className="text-slate-500 font-normal text-xs mb-1">Senha temporária:</p>
-              <p className="text-2xl font-mono tracking-widest text-blue-600">{senhaTemporariaGerada}</p>
-            </div>
-          )}
+          <div className="mt-3 p-3 bg-white border border-emerald-200 rounded text-center">
+            <p className="text-slate-500 font-normal text-xs mb-1">Senha temporária:</p>
+            <p className="text-2xl font-mono tracking-widest text-blue-600">
+              {senhaTemporariaGerada || "Erro ao recuperar senha"}
+            </p>
+          </div>
         </div>
       )}
 
