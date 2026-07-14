@@ -188,7 +188,7 @@ export default function Dashboard() {
           const casaNomeFamilia = casa ? (casa.nomeFamilia || "Sem Nome") : "Casa Não Cadastrada";
           const casaNumero = casa ? (casa.numeroCasa || "") : "N/A";
           const enderecoCompleto = casa
-            ? `${casa.logradouro || ""}, ${casa.numeroEndereço || "S/N"} - ${casa.bairro || ""}, ${casa.cidade || ""}`
+            ? `${casa.logradouro || ""}, ${casa.numeroEndereco || "S/N"} - ${casa.bairro || ""}, ${casa.cidade || ""}`
             : "Endereço não disponível";
 
           const endereco = enderecoCompleto.replace(", ,", ",").replace(" - ,", "");
