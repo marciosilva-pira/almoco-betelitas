@@ -10,7 +10,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const ADMIN_EMAIL = "marciosilva.pira@gmail.com"; 
+  const ADMIN_EMAIL = "marciosilva.pira@gmail.com";
   const isAdmin = auth.currentUser?.email === ADMIN_EMAIL;
 
   const isActive = (path: string) => {
@@ -23,9 +23,8 @@ export default function Sidebar() {
   };
 
   return (
-    // Removido 'fixed' e 'h-screen' para o layout.tsx controlar a exibição
-    <aside className="w-64 bg-slate-900 text-white flex flex-col h-full">
-      
+    <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen">
+
       <div className="p-6 border-b border-slate-800 shrink-0">
         <h1 className="text-xl font-bold tracking-wide">🍽️ Almoço Betelitas</h1>
       </div>

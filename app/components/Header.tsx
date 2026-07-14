@@ -20,12 +20,15 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-slate-200 h-16 px-4 md:px-8 flex justify-between items-center shrink-0">
       {/* A frase "Ambiente de Produção" foi removida daqui */}
-      <div></div> 
+      <div></div>
 
       <div className="flex items-center gap-4 text-slate-800">
-        <div className="text-right">
-          <p className="text-sm font-bold text-slate-900 truncate max-w-[150px]">{userName}</p>
-          <button 
+        // No seu Header.tsx, altere o bloco do e-mail para:
+        <div className="text-right max-w-[120px] md:max-w-[200px]">
+          <p className="text-sm font-bold text-slate-900 truncate">
+            {userName}
+          </p>
+          <button
             onClick={() => setIsModalOpen(true)}
             className="text-[10px] text-blue-600 hover:underline font-bold uppercase"
           >
