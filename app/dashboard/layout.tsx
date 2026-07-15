@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -9,25 +8,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <button 
-        className="md:hidden p-4 fixed top-0 left-0 z-50 text-2xl text-slate-900" 
-        onClick={() => setMenuAberto(!menuAberto)}
-      >
-        ☰
-      </button>
-
+      
+      {/* Sidebar - Menu Lateral */}
       <div className={`fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${menuAberto ? "translate-x-0" : "-translate-x-full"}`}>
         <div onClick={() => setMenuAberto(false)} className="h-full">
            <Sidebar />
         </div>
       </div>
 
+      {/* Overlay para fechar ao clicar fora no mobile */}
       {menuAberto && (
         <div className="md:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setMenuAberto(false)}></div>
       )}
 
+      {/* Conteúdo Principal */}
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+        {/* Agora passamos a função para o Header, resolvendo o erro da Vercel */}
+        <Header toggleMenu={() => setMenuAberto(!menuAberto)} />
         <main className="p-4 md:p-8">
           {children}
         </main>
