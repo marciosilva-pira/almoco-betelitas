@@ -86,54 +86,57 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-lg max-w-md w-full mx-4">
-      <h2 className="text-2xl font-bold text-center text-slate-800 mb-6">
-        {isCadastro ? "Criar Novo Usuário" : (esquecendoSenha ? "Recuperar Senha" : "Almoço Betelitas")}
-      </h2>
-      
-      {erro && <div className="bg-red-50 text-red-600 border border-red-200 text-sm p-3 rounded-lg mb-4 text-center">{erro}</div>}
-      
-      {sucesso && (
-        <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm p-4 rounded-lg mb-4 text-left font-bold">
-          <p>{sucesso}</p>
-          <div className="mt-3 p-3 bg-white border border-emerald-200 rounded text-center">
-            <p className="text-slate-500 font-normal text-xs mb-1">Senha temporária:</p>
-            <p className="text-2xl font-mono tracking-widest text-blue-600">
-              {senhaTemporariaGerada || "Erro ao recuperar senha"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={isCadastro ? handleCadastro : (esquecendoSenha ? handleEsqueciSenha : handleLogin)} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">E-mail</label>
-          <input type="email" required placeholder="exemplo@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"/>
-        </div>
+    // ESTA DIV É A QUE CENTRALIZA TUDO NA TELA
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-lg max-w-md w-full">
+        <h2 className="text-2xl font-bold text-center text-slate-800 mb-6">
+          {isCadastro ? "Criar Novo Usuário" : (esquecendoSenha ? "Recuperar Senha" : "Almoço Betelitas")}
+        </h2>
         
-        {(!esquecendoSenha && (!isCadastro || senhaTemporariaGerada)) && (
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Senha</label>
-            <input type="password" required={!senhaTemporariaGerada} placeholder="Sua senha" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"/>
+        {erro && <div className="bg-red-50 text-red-600 border border-red-200 text-sm p-3 rounded-lg mb-4 text-center">{erro}</div>}
+        
+        {sucesso && (
+          <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm p-4 rounded-lg mb-4 text-left font-bold">
+            <p>{sucesso}</p>
+            <div className="mt-3 p-3 bg-white border border-emerald-200 rounded text-center">
+              <p className="text-slate-500 font-normal text-xs mb-1">Senha temporária:</p>
+              <p className="text-2xl font-mono tracking-widest text-blue-600">
+                {senhaTemporariaGerada || "Erro ao recuperar senha"}
+              </p>
+            </div>
           </div>
         )}
 
-        <button type="submit" disabled={carregando} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all text-sm">
-          {carregando ? "Processando..." : (esquecendoSenha ? "Enviar E-mail" : (isCadastro && senhaTemporariaGerada ? "Fazer Login" : (isCadastro ? "Gerar Acesso" : "Entrar")))}
-        </button>
-      </form>
-      
-      <div className="mt-6 text-center space-y-2">
-        {!esquecendoSenha && (
-          <button type="button" onClick={() => { setIsCadastro(!isCadastro); setErro(""); setSucesso(""); setSenhaTemporariaGerada(""); }} className="text-xs text-blue-600 hover:underline font-medium block w-full">
-            {isCadastro ? "Já tenho conta. Fazer Login" : "Não tem acesso? Cadastrar"}
+        <form onSubmit={isCadastro ? handleCadastro : (esquecendoSenha ? handleEsqueciSenha : handleLogin)} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">E-mail</label>
+            <input type="email" required placeholder="exemplo@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"/>
+          </div>
+          
+          {(!esquecendoSenha && (!isCadastro || senhaTemporariaGerada)) && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Senha</label>
+              <input type="password" required={!senhaTemporariaGerada} placeholder="Sua senha" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"/>
+            </div>
+          )}
+
+          <button type="submit" disabled={carregando} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all text-sm">
+            {carregando ? "Processando..." : (esquecendoSenha ? "Enviar E-mail" : (isCadastro && senhaTemporariaGerada ? "Fazer Login" : (isCadastro ? "Gerar Acesso" : "Entrar")))}
           </button>
-        )}
-        {!isCadastro && (
-          <button type="button" onClick={() => { setEsquecendoSenha(!esquecendoSenha); setErro(""); setSucesso(""); }} className="text-xs text-slate-500 hover:underline font-medium block w-full">
-            {esquecendoSenha ? "Voltar ao Login" : "Esqueci minha senha"}
-          </button>
-        )}
+        </form>
+        
+        <div className="mt-6 text-center space-y-2">
+          {!esquecendoSenha && (
+            <button type="button" onClick={() => { setIsCadastro(!isCadastro); setErro(""); setSucesso(""); setSenhaTemporariaGerada(""); }} className="text-xs text-blue-600 hover:underline font-medium block w-full">
+              {isCadastro ? "Já tenho conta. Fazer Login" : "Não tem acesso? Cadastrar"}
+            </button>
+          )}
+          {!isCadastro && (
+            <button type="button" onClick={() => { setEsquecendoSenha(!esquecendoSenha); setErro(""); setSucesso(""); }} className="text-xs text-slate-500 hover:underline font-medium block w-full">
+              {esquecendoSenha ? "Voltar ao Login" : "Esqueci minha senha"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
