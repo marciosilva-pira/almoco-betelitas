@@ -20,7 +20,7 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-slate-200 h-16 px-4 flex justify-between items-center shrink-0">
       {/* Espaço vazio para manter o alinhamento no celular */}
-      // Substitua o <div className="w-10"></div> por isto:
+      {/*// Substitua o <div className="w-10"></div> por isto:*/}
       <button
         className="p-2 -ml-2 text-slate-600 md:hidden"
         onClick={() => { /* lógica para abrir o menu lateral */ }}
