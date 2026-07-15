@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import StatCard from "../components/StatCard";
+import { Phone } from "lucide-react";
 
 interface ProgramacaoRealizada {
   id: string;
@@ -439,11 +440,10 @@ export default function Dashboard() {
                               onClick={() => abrirMenuTelefone(prog.id)}
                               className="flex items-center gap-2 transition-all cursor-pointer group hover:opacity-80"
                             >
-                              {/* Alterado para text-red-500 para ficar vermelho */}
-                              <span className="text-lg shrink-0 text-red-500">📞</span>
+                              {/* Agora usando o ícone do Lucide com a cor vermelha */}
+                              <Phone className="w-5 h-5 text-red-500 shrink-0" />
 
-                              {/* Texto azul e sublinhado sutil que já comunica interatividade */}
-                              <span className="text-blue-300 border-b border-blue-400/30">
+                              <span className="text-blue-300 underline decoration-blue-400/30 underline-offset-4 decoration-1 hover:decoration-blue-400 transition-all">
                                 {prog.telefone}
                               </span>
                             </button>
