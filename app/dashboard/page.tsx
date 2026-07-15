@@ -26,23 +26,15 @@ export default function Dashboard() {
   const [programacoes, setProgramacoes] = useState<ProgramacaoRealizada[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [menuTelefoneAberto, setMenuTelefoneAberto] = useState<string | null>(null);
+
   useEffect(() => {
     carregarDados();
   }, []);
 
-  const tratarCliqueTelefone = (telefone: string) => {
-    const numeroLimpo = telefone.replace(/\D/g, ""); // Remove tudo que não é dígito
-    const escolha = window.confirm("Deseja abrir o WhatsApp ou fazer uma ligação?");
-
-    if (escolha) {
-      // Tenta abrir o WhatsApp
-      window.open(`https://wa.me/55${numeroLimpo}`, "_blank");
-    } else {
-      // Faz a ligação
-      window.location.href = `tel:${numeroLimpo}`;
-    }
+  const abrirMenuTelefone = (id: string) => {
+    setMenuTelefoneAberto(menuTelefoneAberto === id ? null : id);
   };
-
 
   // Formata a data de AAAA-MM-DD para DD/MM/AAAA por extenso
   function formatarDataExtenso(dataString: string) {
@@ -417,17 +409,36 @@ export default function Dashboard() {
                           </a>
                         )}
 
-
                         {prog.telefone && (
-                          <button
-                            onClick={() => tratarCliqueTelefone(prog.telefone)}
-                            className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group"
-                          >
-                            <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📞</span>
-                            <span className="underline decoration-slate-500 underline-offset-4">{prog.telefone}</span>
-                          </button>
-                        )}
+                          <div className="relative">
+                            <button
+                              onClick={() => abrirMenuTelefone(prog.id)}
+                              className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group"
+                            >
+                              <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📞</span>
+                              <span className="underline decoration-slate-500 underline-offset-4">{prog.telefone}</span>
+                            </button>
 
+                            {/* Menu Dropdown Visual */}
+                            {menuTelefoneAberto === prog.id && (
+                              <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl z-50 p-2 border border-slate-100 animate-in fade-in zoom-in duration-200">
+                                <a
+                                  href={`https://wa.me/55${prog.telefone.replace(/\D/g, "")}`}
+                                  target="_blank"
+                                  className="flex items-center gap-2 p-2 hover:bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  <span>💬</span> WhatsApp
+                                </a>
+                                <a
+                                  href={`tel:${prog.telefone.replace(/\D/g, "")}`}
+                                  className="flex items-center gap-2 p-2 hover:bg-blue-50 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  <span>📱</span> Ligar
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         {/*}
                         {prog.endereco && (
                           <p className="flex items-start gap-2">
