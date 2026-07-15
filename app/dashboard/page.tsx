@@ -422,29 +422,29 @@ export default function Dashboard() {
                             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(prog.endereco)}&travelmode=driving`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-start gap-2 hover:text-white transition-colors cursor-pointer group"
+                            className="flex items-start gap-2 text-blue-300 hover:text-white transition-colors"
                           >
-                            <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📍</span>
-                            <span className="underline decoration-slate-500 underline-offset-4">{prog.endereco}</span>
+                            <span className="text-base shrink-0 text-blue-400 mt-0.5">📍</span>
+
+                            {/* Aqui usamos 'underline' e 'decoration' em vez de 'border-b' */}
+                            <span className="underline decoration-blue-400/30 underline-offset-4 decoration-1 hover:decoration-blue-400 transition-all">
+                              {prog.endereco}
+                            </span>
                           </a>
                         )}
-                        
+
                         {prog.telefone && (
                           <div className="relative btn-telefone-container">
                             <button
                               onClick={() => abrirMenuTelefone(prog.id)}
-                              className="flex items-center gap-2 transition-all cursor-pointer group"
+                              className="flex items-center gap-2 transition-all cursor-pointer group hover:opacity-80"
                             >
-                              <span className="text-lg shrink-0 text-blue-400 drop-shadow-md transition-transform">📞</span>
+                              {/* Ícone azul que se destaca no fundo escuro */}
+                              <span className="text-lg shrink-0 text-blue-400">📞</span>
 
-                              {/* O texto fica ligeiramente destacado para indicar interatividade */}
-                              <span className="text-slate-200 font-medium hover:text-white transition-colors duration-300">
+                              {/* Texto azul e sublinhado sutil que já comunica interatividade */}
+                              <span className="text-blue-300 border-b border-blue-400/30">
                                 {prog.telefone}
-                              </span>
-
-                              {/* Indicador visual fixo (opcional) para celulares */}
-                              <span className="text-[10px] text-blue-500/50 uppercase ml-1 hidden md:inline-block">
-                                (clique)
                               </span>
                             </button>
 
