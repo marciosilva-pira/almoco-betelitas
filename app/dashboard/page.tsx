@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   const [menuTelefoneAberto, setMenuTelefoneAberto] = useState<string | null>(null);
+  const limparTelefone = (tel: string) => tel.replace(/\D/g, "");
 
   useEffect(() => {
     carregarDados();
@@ -52,6 +53,8 @@ export default function Dashboard() {
       document.removeEventListener("mousedown", fecharAoClicarFora);
     };
   }, [menuTelefoneAberto]);
+
+
 
   // Formata a data de AAAA-MM-DD para DD/MM/AAAA por extenso
   function formatarDataExtenso(dataString: string) {
@@ -425,48 +428,48 @@ export default function Dashboard() {
                             <span className="underline decoration-slate-500 underline-offset-4">{prog.endereco}</span>
                           </a>
                         )}
-
+                        
                         {prog.telefone && (
-                          <div className="relative">
+                          <div className="relative btn-telefone-container">
                             <button
                               onClick={() => abrirMenuTelefone(prog.id)}
-                              className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group"
+                              className="flex items-center gap-2 transition-all cursor-pointer group"
                             >
-                              <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📞</span>
-                              <span className="underline decoration-slate-500 underline-offset-4">{prog.telefone}</span>
+                              <span className="text-lg shrink-0 text-blue-400 drop-shadow-md transition-transform">📞</span>
+
+                              {/* O texto fica ligeiramente destacado para indicar interatividade */}
+                              <span className="text-slate-200 font-medium hover:text-white transition-colors duration-300">
+                                {prog.telefone}
+                              </span>
+
+                              {/* Indicador visual fixo (opcional) para celulares */}
+                              <span className="text-[10px] text-blue-500/50 uppercase ml-1 hidden md:inline-block">
+                                (clique)
+                              </span>
                             </button>
 
-                            {prog.telefone && (
-                              <div className="relative btn-telefone-container"> {/* Classe adicionada aqui */}
-                                <button
-                                  onClick={() => abrirMenuTelefone(prog.id)}
-                                  className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group"
+                            {menuTelefoneAberto === prog.id && (
+                              <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl z-50 p-2 border border-slate-100 animate-in fade-in zoom-in duration-200">
+                                <a
+                                  href={`https://wa.me/55${limparTelefone(prog.telefone)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 p-2 hover:bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium transition-colors"
                                 >
-                                  <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📞</span>
-                                  <span className="underline decoration-slate-500 underline-offset-4">{prog.telefone}</span>
-                                </button>
-
-                                {menuTelefoneAberto === prog.id && (
-                                  <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl z-50 p-2 border border-slate-100 animate-in fade-in zoom-in duration-200">
-                                    <a
-                                      href={`https://wa.me/55${prog.telefone.replace(/\D/g, "")}`}
-                                      target="_blank"
-                                      className="flex items-center gap-2 p-2 hover:bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                      <span>💬</span> WhatsApp
-                                    </a>
-                                    <a
-                                      href={`tel:${prog.telefone.replace(/\D/g, "")}`}
-                                      className="flex items-center gap-2 p-2 hover:bg-blue-50 text-blue-700 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                      <span>📱</span> Ligar
-                                    </a>
-                                  </div>
-                                )}
+                                  <span>💬</span> WhatsApp
+                                </a>
+                                <a
+                                  href={`tel:${limparTelefone(prog.telefone)}`}
+                                  className="flex items-center gap-2 p-2 hover:bg-blue-50 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  <span>📱</span> Ligar
+                                </a>
                               </div>
                             )}
+                          </div>
+                        )}
 
-                            {/*}
+                        {/*}
                         {prog.endereco && (
                           <p className="flex items-start gap-2">
                             <span className="text-base shrink-0">📍</span>
@@ -488,53 +491,53 @@ export default function Dashboard() {
                         </p>
 */}
 
-                          </div>
+                      </div>
                     </div>
 
-                      {/* Card Direito - Betelitas Definidos agrupados */}
-                      <div className="lg:col-span-7 bg-white/5 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
-                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                          <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length})
-                        </h3>
+                    {/* Card Direito - Betelitas Definidos agrupados */}
+                    <div className="lg:col-span-7 bg-white/5 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
+                      <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length})
+                      </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {prog.participantesDetalhados.map((part, index) => {
-                            const statusInfo = obterStatusInfo(part.status);
-                            return (
-                              <div
-                                key={index}
-                                className="bg-white/10 border border-white/5 rounded-lg p-3.5 flex flex-col justify-between gap-2 hover:bg-white/15 transition-all"
-                              >
-                                <div className="flex justify-between items-start">
-                                  <span className="font-bold text-white text-sm md:text-base">
-                                    {part.nome}
-                                  </span>
-                                  <span className="text-xl">{statusInfo.icone}</span>
-                                </div>
-
-                                <span
-                                  className={`inline-flex items-center justify-center self-start text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${statusInfo.classe}`}
-                                >
-                                  {statusInfo.label}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {prog.participantesDetalhados.map((part, index) => {
+                          const statusInfo = obterStatusInfo(part.status);
+                          return (
+                            <div
+                              key={index}
+                              className="bg-white/10 border border-white/5 rounded-lg p-3.5 flex flex-col justify-between gap-2 hover:bg-white/15 transition-all"
+                            >
+                              <div className="flex justify-between items-start">
+                                <span className="font-bold text-white text-sm md:text-base">
+                                  {part.nome}
                                 </span>
+                                <span className="text-xl">{statusInfo.icone}</span>
                               </div>
-                            );
-                          })}
-                        </div>
+
+                              <span
+                                className={`inline-flex items-center justify-center self-start text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${statusInfo.classe}`}
+                              >
+                                {statusInfo.label}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
                 </div>
-                );
-          })}
               </div>
-            ) : (
-          <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
-            <p className="text-sm text-slate-400">
-              Nenhuma programação de almoço cadastrada no banco de dados.
-            </p>
-          </div>
-      )}
+            );
+          })}
         </div>
-      );
+      ) : (
+        <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
+          <p className="text-sm text-slate-400">
+            Nenhuma programação de almoço cadastrada no banco de dados.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
