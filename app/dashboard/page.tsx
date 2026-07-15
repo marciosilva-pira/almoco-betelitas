@@ -235,9 +235,41 @@ export default function Dashboard() {
       listaProgramacoes = listaProgramacoes.filter(prog => prog.participantesDetalhados.length > 0);
 
       // Ordena as programações por data decrescente (mais recentes primeiro)
-      listaProgramacoes.sort((a, b) => b.data.localeCompare(a.data));
+      //listaProgramacoes.sort((a, b) => b.data.localeCompare(a.data));
+
+      // Ordena: Primeiro por Data (mais recentes), depois por Casa (agendadas vs outros)
+      listaProgramacoes.sort((a, b) => {
+        // 1. Prioriza por Data (mais recentes primeiro)
+        const dataComparacao = b.data.localeCompare(a.data);
+        if (dataComparacao !== 0) return dataComparacao;
+
+        // 2. Se a data for igual, prioriza quem tem casaId (agendadas)
+        if (!!a.casaId !== !!b.casaId) {
+          return a.casaId ? -1 : 1;
+        }
+
+        // 3. Se ambos tiverem ou não casa, mantém a ordem original
+        return 0;
+      });
 
       setProgramacoes(listaProgramacoes);
+
+      // Após setProgramacoes(listaProgramacoes);
+
+      // Identifica a data do próximo almoço (primeiro da lista ordenada)
+      const proximaData = listaProgramacoes.length > 0 ? listaProgramacoes[0].data : null;
+
+      // Conta quantas casas únicas têm agendamento para essa data específica
+      const casasOcupadasNaProximaData = new Set(
+        listaProgramacoes
+          .filter(p => p.data === proximaData && p.casaId)
+          .map(p => p.casaId)
+      ).size;
+
+      // Calcula a diferença
+      const casasDisponiveis = Math.max(0, totalCasas - casasOcupadasNaProximaData);
+
+
     } catch (error) {
       console.error("Erro ao carregar dados do Dashboard:", error);
     } finally {
@@ -285,7 +317,11 @@ export default function Dashboard() {
 
         <StatCard
           titulo="Casas Disponíveis"
-          valor={totalCasas}
+          // Se houver programação, mostra o cálculo, senão mostra o total
+          valor={programacoes.length > 0
+            ? Math.max(0, totalCasas - new Set(programacoes.filter(p => p.data === programacoes[0].data && p.casaId).map(p => p.casaId)).size)
+            : totalCasas
+          }
           icone="📍"
           bgColorIcone="bg-amber-50"
           textColorIcone="text-amber-600"
@@ -312,8 +348,8 @@ export default function Dashboard() {
               <div
                 key={prog.id}
                 className={`rounded-2xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden transition-all ${isPrimeira
-                    ? "bg-gradient-to-r from-slate-900 to-indigo-950 ring-2 ring-indigo-500/20"
-                    : "bg-gradient-to-r from-slate-800 to-slate-900"
+                  ? "bg-gradient-to-r from-slate-900 to-indigo-950 ring-2 ring-indigo-500/20"
+                  : "bg-gradient-to-r from-slate-800 to-slate-900"
                   }`}
               >
                 {/* Detalhe estético de fundo do prato com talheres */}
@@ -323,6 +359,13 @@ export default function Dashboard() {
 
                 <div className="relative z-10">
                   <div className="flex flex-wrap items-center gap-2 mb-4">
+
+                    {/* Badge Padronizada */}
+                    <span className="bg-slate-700/50 text-slate-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-slate-600/30">
+                      PROGRAMAÇÃO AGENDADA
+                    </span>
+
+                    {/*}
                     {isPrimeira ? (
                       <span className="bg-indigo-500/30 text-indigo-200 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-indigo-500/20">
                         PRÓXIMA PROGRAMAÇÃO
@@ -332,6 +375,8 @@ export default function Dashboard() {
                         PROGRAMAÇÃO AGENDADA
                       </span>
                     )}
+*/}
+
                     <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">
                       Data: {formatarDataCurta(prog.data)}
                     </span>
@@ -341,16 +386,33 @@ export default function Dashboard() {
                     {/* Card Esquerdo - Dados da Casa ou do Status de Ausência */}
                     <div className="lg:col-span-5 space-y-4">
                       <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                        {prog.casaNumero ? `Casa ${prog.casaNumero} — ${prog.casaFamilia}` : prog.casaFamilia}
+                        {prog.casaNumero ? `Casa — ${prog.casaFamilia}` : prog.casaFamilia}
                       </h2>
 
                       <div className="space-y-2 text-slate-300 text-sm">
+
+                        {prog.endereco && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prog.endereco)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-start gap-2 hover:text-white transition-colors cursor-pointer group"
+                          >
+                            <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📍</span>
+                            <span className="underline decoration-slate-500 underline-offset-4">{prog.endereco}</span>
+                          </a>
+                        )}
+
+                        {/*}
                         {prog.endereco && (
                           <p className="flex items-start gap-2">
                             <span className="text-base shrink-0">📍</span>
                             <span>{prog.endereco}</span>
                           </p>
                         )}
+*/}
+
+
                         {prog.telefone && (
                           <p className="flex items-center gap-2">
                             <span className="text-base shrink-0">📞</span>
@@ -369,7 +431,7 @@ export default function Dashboard() {
                     {/* Card Direito - Betelitas Definidos agrupados */}
                     <div className="lg:col-span-7 bg-white/5 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
                       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length}) & Suas Opções:
+                        <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length})
                       </h3>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
