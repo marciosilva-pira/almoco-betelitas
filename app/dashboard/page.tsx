@@ -439,8 +439,8 @@ export default function Dashboard() {
                               onClick={() => abrirMenuTelefone(prog.id)}
                               className="flex items-center gap-2 transition-all cursor-pointer group hover:opacity-80"
                             >
-                              {/* Ícone azul que se destaca no fundo escuro */}
-                              <span className="text-lg shrink-0 text-blue-400">📞</span>
+                              {/* Alterado para text-red-500 para ficar vermelho */}
+                              <span className="text-lg shrink-0 text-red-500">📞</span>
 
                               {/* Texto azul e sublinhado sutil que já comunica interatividade */}
                               <span className="text-blue-300 border-b border-blue-400/30">
