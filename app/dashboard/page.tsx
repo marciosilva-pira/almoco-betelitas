@@ -36,6 +36,23 @@ export default function Dashboard() {
     setMenuTelefoneAberto(menuTelefoneAberto === id ? null : id);
   };
 
+  useEffect(() => {
+    // Função que fecha o menu se o clique não for no elemento do botão
+    function fecharAoClicarFora(event: MouseEvent) {
+      if (menuTelefoneAberto && !(event.target as HTMLElement).closest('.btn-telefone-container')) {
+        setMenuTelefoneAberto(null);
+      }
+    }
+
+    // Adiciona o listener
+    document.addEventListener("mousedown", fecharAoClicarFora);
+
+    // Remove o listener quando o componente é desmontado
+    return () => {
+      document.removeEventListener("mousedown", fecharAoClicarFora);
+    };
+  }, [menuTelefoneAberto]);
+
   // Formata a data de AAAA-MM-DD para DD/MM/AAAA por extenso
   function formatarDataExtenso(dataString: string) {
     if (!dataString) return "";
@@ -419,27 +436,37 @@ export default function Dashboard() {
                               <span className="underline decoration-slate-500 underline-offset-4">{prog.telefone}</span>
                             </button>
 
-                            {/* Menu Dropdown Visual */}
-                            {menuTelefoneAberto === prog.id && (
-                              <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl z-50 p-2 border border-slate-100 animate-in fade-in zoom-in duration-200">
-                                <a
-                                  href={`https://wa.me/55${prog.telefone.replace(/\D/g, "")}`}
-                                  target="_blank"
-                                  className="flex items-center gap-2 p-2 hover:bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium transition-colors"
+                            {prog.telefone && (
+                              <div className="relative btn-telefone-container"> {/* Classe adicionada aqui */}
+                                <button
+                                  onClick={() => abrirMenuTelefone(prog.id)}
+                                  className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group"
                                 >
-                                  <span>💬</span> WhatsApp
-                                </a>
-                                <a
-                                  href={`tel:${prog.telefone.replace(/\D/g, "")}`}
-                                  className="flex items-center gap-2 p-2 hover:bg-blue-50 text-blue-700 rounded-lg text-sm font-medium transition-colors"
-                                >
-                                  <span>📱</span> Ligar
-                                </a>
+                                  <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📞</span>
+                                  <span className="underline decoration-slate-500 underline-offset-4">{prog.telefone}</span>
+                                </button>
+
+                                {menuTelefoneAberto === prog.id && (
+                                  <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-2xl z-50 p-2 border border-slate-100 animate-in fade-in zoom-in duration-200">
+                                    <a
+                                      href={`https://wa.me/55${prog.telefone.replace(/\D/g, "")}`}
+                                      target="_blank"
+                                      className="flex items-center gap-2 p-2 hover:bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                      <span>💬</span> WhatsApp
+                                    </a>
+                                    <a
+                                      href={`tel:${prog.telefone.replace(/\D/g, "")}`}
+                                      className="flex items-center gap-2 p-2 hover:bg-blue-50 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                      <span>📱</span> Ligar
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                             )}
-                          </div>
-                        )}
-                        {/*}
+
+                            {/*}
                         {prog.endereco && (
                           <p className="flex items-start gap-2">
                             <span className="text-base shrink-0">📍</span>
@@ -461,53 +488,53 @@ export default function Dashboard() {
                         </p>
 */}
 
-                      </div>
+                          </div>
                     </div>
 
-                    {/* Card Direito - Betelitas Definidos agrupados */}
-                    <div className="lg:col-span-7 bg-white/5 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
-                      <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length})
-                      </h3>
+                      {/* Card Direito - Betelitas Definidos agrupados */}
+                      <div className="lg:col-span-7 bg-white/5 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
+                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                          <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length})
+                        </h3>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {prog.participantesDetalhados.map((part, index) => {
-                          const statusInfo = obterStatusInfo(part.status);
-                          return (
-                            <div
-                              key={index}
-                              className="bg-white/10 border border-white/5 rounded-lg p-3.5 flex flex-col justify-between gap-2 hover:bg-white/15 transition-all"
-                            >
-                              <div className="flex justify-between items-start">
-                                <span className="font-bold text-white text-sm md:text-base">
-                                  {part.nome}
-                                </span>
-                                <span className="text-xl">{statusInfo.icone}</span>
-                              </div>
-
-                              <span
-                                className={`inline-flex items-center justify-center self-start text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${statusInfo.classe}`}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {prog.participantesDetalhados.map((part, index) => {
+                            const statusInfo = obterStatusInfo(part.status);
+                            return (
+                              <div
+                                key={index}
+                                className="bg-white/10 border border-white/5 rounded-lg p-3.5 flex flex-col justify-between gap-2 hover:bg-white/15 transition-all"
                               >
-                                {statusInfo.label}
-                              </span>
-                            </div>
-                          );
-                        })}
+                                <div className="flex justify-between items-start">
+                                  <span className="font-bold text-white text-sm md:text-base">
+                                    {part.nome}
+                                  </span>
+                                  <span className="text-xl">{statusInfo.icone}</span>
+                                </div>
+
+                                <span
+                                  className={`inline-flex items-center justify-center self-start text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${statusInfo.classe}`}
+                                >
+                                  {statusInfo.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
+                );
           })}
-        </div>
-      ) : (
-        <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
-          <p className="text-sm text-slate-400">
-            Nenhuma programação de almoço cadastrada no banco de dados.
-          </p>
-        </div>
+              </div>
+            ) : (
+          <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
+            <p className="text-sm text-slate-400">
+              Nenhuma programação de almoço cadastrada no banco de dados.
+            </p>
+          </div>
       )}
-    </div>
-  );
+        </div>
+      );
 }
