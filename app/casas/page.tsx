@@ -179,7 +179,7 @@ export default function CasasPage() {
     }, [pesquisa]);
 
     return (
-        <div className="p-8 max-w-7xl w-full mx-auto space-y-8">
+        <div className="px-4 py-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
             
             {/* TÍTULO DA SEÇÃO */}
             <div>
@@ -213,7 +213,7 @@ export default function CasasPage() {
                 </div>
                 
                 <div className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {/* Informações Básicas */}
                         <div>
                             <div className="flex justify-between items-center mb-1.5">

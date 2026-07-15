@@ -138,7 +138,7 @@ export default function BetelitasPage() {
     }, [filtroBusca]);
 
     return (
-        <div className="p-8 max-w-7xl w-full mx-auto space-y-8">
+        <div className="px-4 py-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
             
             <div>
                 <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
@@ -171,7 +171,7 @@ export default function BetelitasPage() {
                 </div>
                 
                 <div className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         <div className="md:col-span-2">
                             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Nome Completo</label>
                             <input
