@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
-import Sidebar from "./components/Sidebar"; // Ajustado para a sua pasta real de componentes[cite: 9]
-import Header from "./components/Header";   // Ajustado para a sua pasta real de componentes[cite: 8]
+import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
 
 export default function ActiveLayoutClient({
   children,
@@ -10,8 +11,9 @@ export default function ActiveLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  // Adicionamos o estado para controlar o menu aqui
+  const [menuAberto, setMenuAberto] = useState(false);
 
-  // Se estiver na página de login, renderiza a tela totalmente limpa e estilizada
   const isPublicRoute = pathname === "/";
 
   if (isPublicRoute) {
@@ -22,16 +24,27 @@ export default function ActiveLayoutClient({
     );
   }
 
-  // Se estiver logado, renderiza com a Sidebar e Header nas laterais[cite: 8, 9]
   return (
     <div className="flex h-screen w-screen bg-slate-50 overflow-hidden">
-      <Sidebar />
+      {/* Sidebar com controle de visibilidade mobile */}
+      <div className={`fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 md:relative md:translate-x-0 ${menuAberto ? "translate-x-0" : "-translate-x-full"}`}>
+        <div onClick={() => setMenuAberto(false)} className="h-full">
+           <Sidebar />
+        </div>
+      </div>
+
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+        {/* Header agora recebe a função para abrir o menu */}
+        <Header toggleMenu={() => setMenuAberto(!menuAberto)} />
         <main className="flex-1 overflow-y-auto bg-slate-50">
           {children}
         </main>
       </div>
+      
+      {/* Overlay para fechar o menu ao clicar fora no celular */}
+      {menuAberto && (
+        <div className="md:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setMenuAberto(false)}></div>
+      )}
     </div>
   );
 }
