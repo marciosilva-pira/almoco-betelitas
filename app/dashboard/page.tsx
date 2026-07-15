@@ -30,6 +30,20 @@ export default function Dashboard() {
     carregarDados();
   }, []);
 
+  const tratarCliqueTelefone = (telefone: string) => {
+    const numeroLimpo = telefone.replace(/\D/g, ""); // Remove tudo que não é dígito
+    const escolha = window.confirm("Deseja abrir o WhatsApp ou fazer uma ligação?");
+
+    if (escolha) {
+      // Tenta abrir o WhatsApp
+      window.open(`https://wa.me/55${numeroLimpo}`, "_blank");
+    } else {
+      // Faz a ligação
+      window.location.href = `tel:${numeroLimpo}`;
+    }
+  };
+
+
   // Formata a data de AAAA-MM-DD para DD/MM/AAAA por extenso
   function formatarDataExtenso(dataString: string) {
     if (!dataString) return "";
@@ -393,7 +407,7 @@ export default function Dashboard() {
 
                         {prog.endereco && (
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prog.endereco)}`}
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(prog.endereco)}&travelmode=driving`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-start gap-2 hover:text-white transition-colors cursor-pointer group"
@@ -403,6 +417,17 @@ export default function Dashboard() {
                           </a>
                         )}
 
+
+                        {prog.telefone && (
+                          <button
+                            onClick={() => tratarCliqueTelefone(prog.telefone)}
+                            className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer group"
+                          >
+                            <span className="text-base shrink-0 group-hover:scale-110 transition-transform">📞</span>
+                            <span className="underline decoration-slate-500 underline-offset-4">{prog.telefone}</span>
+                          </button>
+                        )}
+
                         {/*}
                         {prog.endereco && (
                           <p className="flex items-start gap-2">
@@ -410,8 +435,6 @@ export default function Dashboard() {
                             <span>{prog.endereco}</span>
                           </p>
                         )}
-*/}
-
 
                         {prog.telefone && (
                           <p className="flex items-center gap-2">
@@ -425,6 +448,8 @@ export default function Dashboard() {
                             {formatarDataExtenso(prog.data)}
                           </span>
                         </p>
+*/}
+
                       </div>
                     </div>
 
