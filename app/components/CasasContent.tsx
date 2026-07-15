@@ -179,7 +179,7 @@ export default function CasasPage() {
     }, [pesquisa]);
 
     return (
-        <div className="px-4 py-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
+        <div className="w-full px-2 py-4 space-y-6 overflow-hidden">
 
             {/* TÍTULO DA SEÇÃO */}
             <div>
