@@ -21,6 +21,7 @@ export default function CasasPage() {
     const [telefone, setTelefone] = useState("");
     const [logradouro, setLogradouro] = useState("");
     const [numeroEndereco, setNumeroEndereco] = useState("");
+    const [complemento, setComplemento] = useState("");
     const [bairro, setBairro] = useState("");
     const [cidade, setCidade] = useState("");
     const [cep, setCep] = useState("");
@@ -69,6 +70,7 @@ export default function CasasPage() {
         setResponsavel(casa.responsavel || "");
         setTelefone(casa.telefone || "");
         setLogradouro(casa.logradouro || "");
+        setComplemento(casa.complemento || "");
         setNumeroEndereco(casa.numeroEndereco || "");
         setBairro(casa.bairro || "");
         setCidade(casa.cidade || "");
@@ -89,6 +91,7 @@ export default function CasasPage() {
         setResponsavel("");
         setTelefone("");
         setLogradouro("");
+        setComplemento("");
         setNumeroEndereco("");
         setBairro("");
         setCidade("");
@@ -129,6 +132,7 @@ export default function CasasPage() {
                 telefone,
                 logradouro,
                 numeroEndereco,
+                complemento,
                 bairro,
                 cidade,
                 cep,
@@ -294,6 +298,17 @@ export default function CasasPage() {
                         </div>
 
                         <div>
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Complemento</label>
+                            <input
+                                type="text"
+                                placeholder="Apto 101 - Condomínio Bela Vista"
+                                value={complemento}
+                                onChange={(e) => setComplemento(e.target.value)}
+                                className="w-full border border-slate-200 p-2.5 text-sm rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            />
+                        </div>
+
+                        <div>
                             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Bairro</label>
                             <input
                                 type="text"
@@ -395,6 +410,7 @@ export default function CasasPage() {
                                     <th className="py-3.5 px-6">Telefone</th>
                                     <th className="py-3.5 px-6">Bairro / Cidade</th>
                                     <th className="py-3.5 px-6">Endereço Completo</th>
+                                    <th className="py-3.5 px-6">Complemento</th>
                                     <th className="py-3.5 px-6 text-right w-44">Ações</th>
                                 </tr>
                             </thead>
@@ -430,6 +446,11 @@ export default function CasasPage() {
                                             <td className="py-3 px-6 text-xs text-slate-500 max-w-xs truncate">
                                                 {casa.logradouro}, {casa.numeroEndereco} {casa.cep ? `(CEP: ${casa.cep})` : ""}
                                             </td>
+                                            {/* Complemento */}
+                                            <td className="py-3 px-6 text-xs text-slate-500 max-w-xs truncate">
+                                                {casa.complemento || "—"}
+                                            </td>
+
                                             {/* Ações */}
                                             <td className="py-3 px-6 text-right">
                                                 <div className="flex justify-end items-center gap-2">

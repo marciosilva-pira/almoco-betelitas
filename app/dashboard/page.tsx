@@ -213,10 +213,15 @@ export default function Dashboard() {
           const chaveAgrupamento = `${dataAgendada}_${idProcurado}`;
           const casa = dicionarioCasas[idProcurado];
           const casaNomeFamilia = casa ? (casa.nomeFamilia || "Sem Nome") : "Casa Não Cadastrada";
-          const casaNumero = casa ? (casa.numeroCasa || "") : "N/A";
+          const logradouro = casa.logradouro || "";
+          const casaNumero = casa.numeroEndereco ? ` - ${casa.numeroEndereco}` : ", S/N";
+          const complemento = casa.complemento ? ` - ${casa.complemento}` : "";
+          const bairro = casa.bairro ? ` - ${casa.bairro}` : "";
+          const cidade = casa.cidade ? `, ${casa.cidade}` : "";
           const enderecoCompleto = casa
-            ? `${casa.logradouro || ""}, ${casa.numeroEndereco || "S/N"} - ${casa.bairro || ""}, ${casa.cidade || ""}`
+            ? `${logradouro}${casaNumero}${complemento}${bairro}${cidade}`
             : "Endereço não disponível";
+
 
           const endereco = enderecoCompleto.replace(", ,", ",").replace(" - ,", "");
           const telefone = casa ? (casa.telefone || "Telefone não disponível") : "";
