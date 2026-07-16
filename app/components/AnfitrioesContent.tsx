@@ -74,7 +74,8 @@ export default function AnfitrioesContent() {
 
                             <div className="space-y-2 text-sm text-slate-600">
                                 <p>{casa.logradouro}, {casa.numeroEndereco} - {casa.bairro}</p>
-                                <p>{casa.complemento} - {casa.telefone}</p>
+                                <p>{casa.complemento}</p>
+                                <p>{casa.telefone}</p>
                             </div>
 
                             <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
