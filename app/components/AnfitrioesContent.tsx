@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { Phone, MapPin, Search, X } from "lucide-react";
+import { Phone, MapPin, Search, X, MessageCircle } from "lucide-react";
 
 export default function AnfitrioesContent() {
     const [casas, setCasas] = useState<any[]>([]);
@@ -79,23 +79,32 @@ export default function AnfitrioesContent() {
                             </div>
 
                             <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
-                                {/* Maps */}
+                                {/* Maps - Aumentado para p-3 e size 22 */}
                                 <a
                                     href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${casa.logradouro}, ${casa.numeroEndereco}, ${casa.cidade}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+                                    className="p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                                 >
-                                    <MapPin size={18} />
-                                </a>                                {/* WhatsApp */}
-                                <a href={`https://wa.me/55${casa.telefone?.replace(/\D/g, "")}`}
-                                    target="_blank" className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100">
-                                    💬
+                                    <MapPin size={22} />
                                 </a>
-                                {/* Ligar */}
-                                <a href={`tel:${casa.telefone?.replace(/\D/g, "")}`}
-                                    className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100">
-                                    <Phone size={18} />
+
+                                {/* WhatsApp - Agora com ícone oficial e tamanho ajustado */}
+                                <a
+                                    href={`https://wa.me/55${casa.telefone?.replace(/\D/g, "")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-3 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"
+                                >
+                                    <MessageCircle size={22} />
+                                </a>
+
+                                {/* Ligar - Aumentado para p-3 e size 22 */}
+                                <a
+                                    href={`tel:${casa.telefone?.replace(/\D/g, "")}`}
+                                    className="p-3 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                                >
+                                    <Phone size={22} />
                                 </a>
                             </div>
                         </div>
