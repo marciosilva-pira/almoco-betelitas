@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
+import { HeartHandshake, House } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -23,7 +25,7 @@ export default function Sidebar() {
   };
 
   return (
-    
+
     <aside className="w-64 bg-slate-900 text-white flex flex-col h-full">
 
       <div className="p-6 border-b border-slate-800 shrink-0">
@@ -33,6 +35,15 @@ export default function Sidebar() {
       <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
         <Link href="/dashboard" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/dashboard")}`}>
           📊 Dashboard
+        </Link>
+
+        <Link href="/anfitrioes" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/anfitrioes")}`}>
+          <Users
+            size={20}
+            className="stroke-blue-700" // Cor da pessoa da frente
+            style={{ color: '#ff6633' }} // Cor da pessoa de trás (a "sombra")
+          />
+          Anfitriões
         </Link>
 
         {isAdmin && (

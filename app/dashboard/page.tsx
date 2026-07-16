@@ -14,6 +14,7 @@ interface ProgramacaoRealizada {
   casaNumero: string;
   casaFamilia: string;
   endereco: string;
+  complemento?: string; // O "?" torna o campo opcional, evitando erros em registros antigos
   telefone: string;
   participantesDetalhados: Array<{
     nome: string;
@@ -203,6 +204,7 @@ export default function Dashboard() {
                 casaNumero: "",
                 casaFamilia: statusInfo.label,
                 endereco: "",
+                complemento: "",
                 telefone: "",
                 participantesDetalhados: [part],
               };
@@ -215,11 +217,11 @@ export default function Dashboard() {
           const casaNomeFamilia = casa ? (casa.nomeFamilia || "Sem Nome") : "Casa Não Cadastrada";
           const logradouro = casa.logradouro || "";
           const casaNumero = casa.numeroEndereco ? ` - ${casa.numeroEndereco}` : ", S/N";
-          const complemento = casa.complemento ? ` - ${casa.complemento}` : "";
+          const complemento = casa.complemento || "";
           const bairro = casa.bairro ? ` - ${casa.bairro}` : "";
           const cidade = casa.cidade ? `, ${casa.cidade}` : "";
           const enderecoCompleto = casa
-            ? `${logradouro}${casaNumero}${complemento}${bairro}${cidade}`
+            ? `${logradouro}${casaNumero}${bairro}${cidade}`
             : "Endereço não disponível";
 
 
@@ -253,6 +255,7 @@ export default function Dashboard() {
               casaNumero: String(casaNumero),
               casaFamilia: casaNomeFamilia,
               endereco,
+              complemento: complemento,
               telefone,
               participantesDetalhados: novosParticipantes,
             };
@@ -439,6 +442,21 @@ export default function Dashboard() {
                           </a>
                         )}
 
+                        {/* Complemento como link de pesquisa no Google Maps */}
+                        {prog.complemento && (
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(prog.endereco)}&travelmode=driving`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-start gap-2 text-blue-300 -mt-2 hover:text-white transition-colors"
+                          >
+                            <span className="text-base shrink-0 opacity-0 mt-0.5">📍</span>
+                            <span className="text-sm underline decoration-blue-400/30 underline-offset-4 decoration-1 hover:decoration-blue-400">
+                              {prog.complemento}
+                            </span>
+                          </a>
+                        )}
+                        
                         {prog.telefone && (
                           <div className="relative btn-telefone-container">
                             <button
