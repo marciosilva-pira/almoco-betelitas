@@ -65,6 +65,17 @@ export default function Sidebar() {
           </>
         )}
       </nav>
+
+      <div className="p-4 border-t border-slate-800 shrink-0 mt-auto">
+        <button 
+          onClick={handleLogout} 
+          className="w-full text-slate-400 p-3 text-sm hover:text-white bg-slate-800 rounded-lg"
+        >
+          🚪 Sair do Sistema
+        </button>
+      </div>
+
+
     </aside>
   );
 }
