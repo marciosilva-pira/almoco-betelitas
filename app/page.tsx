@@ -15,7 +15,9 @@ export default function LoginPage() {
   const [sucesso, setSucesso] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [senhaTemporariaGerada, setSenhaTemporariaGerada] = useState("");
-  
+
+  const EM_MANUTENCAO = false;
+
   const router = useRouter();
 
   const gerarSenhaTemporaria = () => {
@@ -65,7 +67,7 @@ export default function LoginPage() {
     setErro("");
     setSucesso("");
     setCarregando(true);
-    
+
     if (senhaTemporariaGerada) {
       router.push("/dashboard");
       return;
@@ -89,12 +91,19 @@ export default function LoginPage() {
     // ESTA DIV É A QUE CENTRALIZA TUDO NA TELA
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-lg max-w-md w-full">
+
+        {EM_MANUTENCAO && (
+          <div className="bg-amber-100 border border-amber-300 text-amber-800 p-3 rounded-lg mb-4 text-xs text-center font-bold">
+            ⚠️ Sistema em manutenção! Estamos atualizando as funcionalidades. Retornaremos em breve.
+          </div>
+        )}
+
         <h2 className="text-2xl font-bold text-center text-slate-800 mb-6">
           {isCadastro ? "Criar Novo Usuário" : (esquecendoSenha ? "Recuperar Senha" : "Almoço Betelitas")}
         </h2>
-        
+
         {erro && <div className="bg-red-50 text-red-600 border border-red-200 text-sm p-3 rounded-lg mb-4 text-center">{erro}</div>}
-        
+
         {sucesso && (
           <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm p-4 rounded-lg mb-4 text-left font-bold">
             <p>{sucesso}</p>
@@ -110,21 +119,21 @@ export default function LoginPage() {
         <form onSubmit={isCadastro ? handleCadastro : (esquecendoSenha ? handleEsqueciSenha : handleLogin)} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">E-mail</label>
-            <input type="email" required placeholder="exemplo@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"/>
+            <input disabled={EM_MANUTENCAO} type="email" required placeholder="exemplo@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm" />
           </div>
-          
+
           {(!esquecendoSenha && (!isCadastro || senhaTemporariaGerada)) && (
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Senha</label>
-              <input type="password" required={!senhaTemporariaGerada} placeholder="Sua senha" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"/>
+              <input disabled={EM_MANUTENCAO} type="password" required={!senhaTemporariaGerada} placeholder="Sua senha" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm" />
             </div>
           )}
 
-          <button type="submit" disabled={carregando} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all text-sm">
+          <button type="submit" disabled={carregando || EM_MANUTENCAO} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all text-sm">
             {carregando ? "Processando..." : (esquecendoSenha ? "Enviar E-mail" : (isCadastro && senhaTemporariaGerada ? "Fazer Login" : (isCadastro ? "Gerar Acesso" : "Entrar")))}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center space-y-2">
           {!esquecendoSenha && (
             <button type="button" onClick={() => { setIsCadastro(!isCadastro); setErro(""); setSucesso(""); setSenhaTemporariaGerada(""); }} className="text-xs text-blue-600 hover:underline font-medium block w-full">
