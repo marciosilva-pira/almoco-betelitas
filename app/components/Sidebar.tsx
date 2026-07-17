@@ -28,38 +28,43 @@ export default function Sidebar() {
 
     <aside className="w-64 bg-slate-900 text-white flex flex-col h-full">
 
-      <div className="p-6 border-b border-slate-800 shrink-0">
-        <h1 className="text-xl font-bold tracking-wide">🍽️ Almoço Betelitas</h1>
-      </div>
-
       <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-        <Link href="/dashboard" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/dashboard")}`}>
-          📊 Dashboard
+        <Link href="/dashboard" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/dashboard")}`}>
+          <span>Dashboard</span>
+          <span>📊</span>
         </Link>
 
-        <Link href="/anfitrioes" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/anfitrioes")}`}>
+        <Link href="/anfitrioes" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/anfitrioes")}`}>
+          <span>Anfitriões</span>
           <Users
             size={20}
-            className="stroke-blue-700" // Cor da pessoa da frente
-            style={{ color: '#ff6633' }} // Cor da pessoa de trás (a "sombra")
+            className="stroke-blue-700"
+            style={{ color: '#ff6633' }}
           />
-          Anfitriões
         </Link>
 
         {isAdmin && (
           <>
-            <Link href="/casas" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/casas")}`}>🏠 Casas</Link>
-            <Link href="/betelitas" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/betelitas")}`}>👥 Betelitas</Link>
-            <Link href="/programacoes" className={`flex items-center gap-3 p-3 rounded-lg ${isActive("/programacoes")}`}>📅 Programações</Link>
+            <Link href="/casas" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/casas")}`}>
+              <span>Casas</span>
+              <span>🏠</span>
+            </Link>
+            <Link href="/betelitas" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/betelitas")}`}>
+              <span>Betelitas</span>
+              <span>👥</span>
+            </Link>
+            <Link href="/programacoes" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/programacoes")}`}>
+              <span>Programações</span>
+              <span>📅</span>
+            </Link>
+            <Link href="/estatisticas" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/estatisticas")}`}>
+              <span>Estatísticas</span>
+              <span>📊</span>
+            </Link>
+
           </>
         )}
       </nav>
-
-      <div className="p-4 border-t border-slate-800 shrink-0 mt-auto">
-        <button onClick={handleLogout} className="w-full text-slate-400 p-3 text-sm hover:text-white bg-slate-800 rounded-lg">
-          🚪 Sair do Sistema
-        </button>
-      </div>
     </aside>
   );
 }
