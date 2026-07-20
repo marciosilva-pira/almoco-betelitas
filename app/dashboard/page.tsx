@@ -266,6 +266,10 @@ export default function Dashboard() {
       // Converte o objeto agrupado de volta para array
       let listaProgramacoes = Object.values(agrupados);
 
+      // Filtra para manter apenas a partir de hoje
+      const hoje = new Date().toISOString().split("T")[0];
+      listaProgramacoes = listaProgramacoes.filter(prog => prog.data >= hoje);
+      
       // Filtra para remover qualquer card de status que tenha ficado sem participantes reais
       listaProgramacoes = listaProgramacoes.filter(prog => prog.participantesDetalhados.length > 0);
 
