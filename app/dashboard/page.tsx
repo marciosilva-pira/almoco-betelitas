@@ -122,8 +122,20 @@ export default function Dashboard() {
         dicionarioBetelitas[doc.id] = { id: doc.id, ...doc.data() };
       });
 
-      // 1ª PASSAGEM: Mapear quais Betelitas estão ativamente escalados em alguma casa por Data
-      // Isso impede que um betelita com casa apareça na lista de "Ausentes" por resquício do banco
+      // Mapeia nomes de convidados avulsos encontrados em todos os documentos de agendamento
+      const dicionarioConvidados: Record<string, string> = {};
+      programacoesSnapshot.forEach((doc) => {
+        const dados = doc.data();
+        if (dados.convidadosAvulsos && Array.isArray(dados.convidadosAvulsos)) {
+          dados.convidadosAvulsos.forEach((conv: any) => {
+            if (conv.id && conv.nome) {
+              dicionarioConvidados[conv.id] = conv.nome;
+            }
+          });
+        }
+      });
+
+      // 1ª PASSAGEM: Mapear quais Betelitas/Convidados estão ativamente escalados em alguma casa por Data
       const betelitasComCasaPorData: Record<string, Set<string>> = {};
 
       programacoesSnapshot.forEach((doc) => {
@@ -143,6 +155,12 @@ export default function Dashboard() {
           listaIds.forEach((id: string) => {
             betelitasComCasaPorData[dataAgendada].add(id);
           });
+          // Adiciona também os convidados avulsos vinculados a esta casa
+          if (dados.convidadosAvulsos && Array.isArray(dados.convidadosAvulsos)) {
+            dados.convidadosAvulsos.forEach((conv: any) => {
+              betelitasComCasaPorData[dataAgendada].add(conv.id);
+            });
+          }
         }
       });
 
@@ -159,8 +177,16 @@ export default function Dashboard() {
 
         const dataAgendada = dados.data || "";
 
-        // Reconstrói a lista de participantes do documento
+        // Reconstrói a lista de participantes do documento (incluindo convidados avulsos)
         const listaParticipantesIds = dados.participantes || [];
+        if (dados.convidadosAvulsos && Array.isArray(dados.convidadosAvulsos)) {
+          dados.convidadosAvulsos.forEach((conv: any) => {
+            if (!listaParticipantesIds.includes(conv.id)) {
+              listaParticipantesIds.push(conv.id);
+            }
+          });
+        }
+
         if (listaParticipantesIds.length === 0 && dados.statusParticipantes) {
           Object.keys(dados.statusParticipantes).forEach((id) => {
             if (!listaParticipantesIds.includes(id)) {
@@ -169,20 +195,33 @@ export default function Dashboard() {
           });
         }
 
-        // Se NÃO tem casa (ex: Juscelino e os registros residuais)
+        // Função auxiliar para resolver o nome correto do participante/convidado
+        function obterNomeParticipante(id: string) {
+          let nomeBruto = "";
+          if (dicionarioBetelitas[id]) {
+            nomeBruto = dicionarioBetelitas[id].nome;
+          } else if (dicionarioConvidados[id]) {
+            nomeBruto = dicionarioConvidados[id];
+          } else {
+            return `Participante (ID: ${id.substring(0, 5)})`;
+          }
+
+          // Remove qualquer estrela ou emoji remanescente do nome
+          return nomeBruto.replace(/⭐\s*/g, "").trim();
+        }
+
+        // Se NÃO tem casa
         if (!idProcurado) {
           listaParticipantesIds.forEach((betelitaId: string) => {
-            // REGRA DE OURO: Se este betelita já está escalado em alguma casa nesta data, ignora ele aqui!
             if (betelitasComCasaPorData[dataAgendada]?.has(betelitaId)) {
               return;
             }
 
-            const betelita = dicionarioBetelitas[betelitaId];
             const status = dados.statusParticipantes?.[betelitaId] || "naoComparecera";
             const statusInfo = obterStatusInfo(status);
 
             const part = {
-              nome: betelita ? betelita.nome : `Betelita (ID: ${betelitaId.substring(0, 5)})`,
+              nome: obterNomeParticipante(betelitaId),
               status: status,
             };
 
@@ -213,26 +252,24 @@ export default function Dashboard() {
         } else {
           // Se TEM casa, renderiza normalmente agrupando por Casa
           const chaveAgrupamento = `${dataAgendada}_${idProcurado}`;
-          const casa = dicionarioCasas[idProcurado];
-          const casaNomeFamilia = casa ? (casa.nomeFamilia || "Sem Nome") : "Casa Não Cadastrada";
+          const casa = dicionarioCasas[idProcurado] || {};
+          const casaNomeFamilia = casa.nomeFamilia || "Sem Nome";
           const logradouro = casa.logradouro || "";
           const casaNumero = casa.numeroEndereco ? ` - ${casa.numeroEndereco}` : ", S/N";
           const complemento = casa.complemento || "";
           const bairro = casa.bairro ? ` - ${casa.bairro}` : "";
           const cidade = casa.cidade ? `, ${casa.cidade}` : "";
-          const enderecoCompleto = casa
+          const enderecoCompleto = casa.logradouro
             ? `${logradouro}${casaNumero}${bairro}${cidade}`
             : "Endereço não disponível";
 
-
           const endereco = enderecoCompleto.replace(", ,", ",").replace(" - ,", "");
-          const telefone = casa ? (casa.telefone || "Telefone não disponível") : "";
+          const telefone = casa.telefone || "Telefone não disponível";
 
           const novosParticipantes = listaParticipantesIds.map((betelitaId: string) => {
-            const betelita = dicionarioBetelitas[betelitaId];
             const status = dados.statusParticipantes?.[betelitaId] || "naoComparecera";
             return {
-              nome: betelita ? betelita.nome : `Betelita (ID: ${betelitaId.substring(0, 5)})`,
+              nome: obterNomeParticipante(betelitaId),
               status: status,
             };
           });
@@ -269,45 +306,23 @@ export default function Dashboard() {
       // Filtra para manter apenas a partir de hoje
       const hoje = new Date().toISOString().split("T")[0];
       listaProgramacoes = listaProgramacoes.filter(prog => prog.data >= hoje);
-      
+
       // Filtra para remover qualquer card de status que tenha ficado sem participantes reais
       listaProgramacoes = listaProgramacoes.filter(prog => prog.participantesDetalhados.length > 0);
 
-      // Ordena as programações por data decrescente (mais recentes primeiro)
-      //listaProgramacoes.sort((a, b) => b.data.localeCompare(a.data));
-
       // Ordena: Primeiro por Data (mais recentes), depois por Casa (agendadas vs outros)
       listaProgramacoes.sort((a, b) => {
-        // 1. Prioriza por Data (mais recentes primeiro)
         const dataComparacao = b.data.localeCompare(a.data);
         if (dataComparacao !== 0) return dataComparacao;
 
-        // 2. Se a data for igual, prioriza quem tem casaId (agendadas)
         if (!!a.casaId !== !!b.casaId) {
           return a.casaId ? -1 : 1;
         }
 
-        // 3. Se ambos tiverem ou não casa, mantém a ordem original
         return 0;
       });
 
       setProgramacoes(listaProgramacoes);
-
-      // Após setProgramacoes(listaProgramacoes);
-
-      // Identifica a data do próximo almoço (primeiro da lista ordenada)
-      const proximaData = listaProgramacoes.length > 0 ? listaProgramacoes[0].data : null;
-
-      // Conta quantas casas únicas têm agendamento para essa data específica
-      const casasOcupadasNaProximaData = new Set(
-        listaProgramacoes
-          .filter(p => p.data === proximaData && p.casaId)
-          .map(p => p.casaId)
-      ).size;
-
-      // Calcula a diferença
-      const casasDisponiveis = Math.max(0, totalCasas - casasOcupadasNaProximaData);
-
 
     } catch (error) {
       console.error("Erro ao carregar dados do Dashboard:", error);
@@ -356,7 +371,6 @@ export default function Dashboard() {
 
         <StatCard
           titulo="Casas Disponíveis"
-          // Se houver programação, mostra o cálculo, senão mostra o total
           valor={programacoes.length > 0
             ? Math.max(0, totalCasas - new Set(programacoes.filter(p => p.data === programacoes[0].data && p.casaId).map(p => p.casaId)).size)
             : totalCasas
@@ -391,30 +405,15 @@ export default function Dashboard() {
                   : "bg-gradient-to-r from-slate-800 to-slate-900"
                   }`}
               >
-                {/* Detalhe estético de fundo do prato com talheres */}
                 <div className="absolute right-0 bottom-0 opacity-5 translate-x-12 translate-y-12 select-none pointer-events-none">
                   <span className="text-[180px]">🍽️</span>
                 </div>
 
                 <div className="relative z-10">
                   <div className="flex flex-wrap items-center gap-2 mb-4">
-
-                    {/* Badge Padronizada */}
                     <span className="bg-slate-700/50 text-slate-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-slate-600/30">
                       PROGRAMAÇÃO AGENDADA
                     </span>
-
-                    {/*}
-                    {isPrimeira ? (
-                      <span className="bg-indigo-500/30 text-indigo-200 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-indigo-500/20">
-                        PRÓXIMA PROGRAMAÇÃO
-                      </span>
-                    ) : (
-                      <span className="bg-slate-700/50 text-slate-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-slate-600/30">
-                        PROGRAMAÇÃO AGENDADA
-                      </span>
-                    )}
-*/}
 
                     <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">
                       Data: {formatarDataCurta(prog.data)}
@@ -422,14 +421,12 @@ export default function Dashboard() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* Card Esquerdo - Dados da Casa ou do Status de Ausência */}
                     <div className="lg:col-span-5 space-y-4">
                       <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
                         {prog.casaNumero ? `Casa — ${prog.casaFamilia}` : prog.casaFamilia}
                       </h2>
 
                       <div className="space-y-2 text-slate-300 text-sm">
-
                         {prog.endereco && (
                           <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(prog.endereco)}&travelmode=driving`}
@@ -438,15 +435,12 @@ export default function Dashboard() {
                             className="flex items-start gap-2 text-blue-300 hover:text-white transition-colors"
                           >
                             <span className="text-base shrink-0 text-blue-400 mt-0.5">📍</span>
-
-                            {/* Aqui usamos 'underline' e 'decoration' em vez de 'border-b' */}
                             <span className="underline decoration-blue-400/30 underline-offset-4 decoration-1 hover:decoration-blue-400 transition-all">
                               {prog.endereco}
                             </span>
                           </a>
                         )}
 
-                        {/* Complemento como link de pesquisa no Google Maps */}
                         {prog.complemento && (
                           <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(prog.endereco)}&travelmode=driving`}
@@ -460,16 +454,14 @@ export default function Dashboard() {
                             </span>
                           </a>
                         )}
-                        
+
                         {prog.telefone && (
                           <div className="relative btn-telefone-container">
                             <button
                               onClick={() => abrirMenuTelefone(prog.id)}
                               className="flex items-center gap-2 transition-all cursor-pointer group hover:opacity-80"
                             >
-                              {/* Agora usando o ícone do Lucide com a cor vermelha */}
                               <Phone className="w-5 h-5 text-red-500 shrink-0" />
-
                               <span className="text-blue-300 underline decoration-blue-400/30 underline-offset-4 decoration-1 hover:decoration-blue-400 transition-all">
                                 {prog.telefone}
                               </span>
@@ -495,33 +487,9 @@ export default function Dashboard() {
                             )}
                           </div>
                         )}
-
-                        {/*}
-                        {prog.endereco && (
-                          <p className="flex items-start gap-2">
-                            <span className="text-base shrink-0">📍</span>
-                            <span>{prog.endereco}</span>
-                          </p>
-                        )}
-
-                        {prog.telefone && (
-                          <p className="flex items-center gap-2">
-                            <span className="text-base shrink-0">📞</span>
-                            <span>{prog.telefone}</span>
-                          </p>
-                        )}
-                        <p className="flex items-center gap-2">
-                          <span className="text-base shrink-0">📅</span>
-                          <span className="font-semibold text-white">
-                            {formatarDataExtenso(prog.data)}
-                          </span>
-                        </p>
-*/}
-
                       </div>
                     </div>
 
-                    {/* Card Direito - Betelitas Definidos agrupados */}
                     <div className="lg:col-span-7 bg-white/5 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
                       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
                         <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length})

@@ -14,13 +14,6 @@ import {
 
 import { db } from "../../lib/firebase";
 
-interface AgendamentoExistente {
-    id: string;
-    casaId: string;
-    casaNome: string;
-    participantes: string[];
-}
-
 export default function ProgramacoesPage() {
     const [data, setData] = useState("");
     const [casaId, setCasaId] = useState("");
@@ -28,11 +21,15 @@ export default function ProgramacoesPage() {
     const [casas, setCasas] = useState<any[]>([]);
     const [betelitas, setBetelitas] = useState<any[]>([]);
 
-    // Armazena onde cada betelita já está alocado na data selecionada
-    // Formato: { [betelitaId]: { agendamentoId, casaId, casaNome } }
+    // Estados para o Convidado Avulso / Visitante
+    const [nomeConvidado, setNomeConvidado] = useState("");
+    const [telefoneConvidado, setTelefoneConvidado] = useState("");
+    const [convidadosDoDia, setConvidadosDoDia] = useState<any[]>([]);
+
+    // Armazena onde cada betelita/convidado já está alocado na data selecionada
     const [alocacoesNaData, setAlocacoesNaData] = useState<Record<string, { agendamentoId: string; casaId: string; casaNome: string }>>({});
 
-    // Armazena o status real consolidado de cada betelita já salvo no banco para a data
+    // Armazena o status real consolidado de cada participante já salvo no banco para a data
     const [statusConsolidadosNaData, setStatusConsolidadosNaData] = useState<Record<string, string>>({});
 
     const [statusParticipantes, setStatusParticipantes] = useState<Record<string, string>>({});
@@ -49,6 +46,7 @@ export default function ProgramacoesPage() {
         } else {
             setAlocacoesNaData({});
             setStatusConsolidadosNaData({});
+            setConvidadosDoDia([]);
         }
     }, [data, casas]);
 
@@ -95,12 +93,12 @@ export default function ProgramacoesPage() {
 
             const mapaAlocacoes: Record<string, { agendamentoId: string; casaId: string; casaNome: string }> = {};
             const mapaStatusConsolidados: Record<string, string> = {};
+            const listaConvidadosTemp: any[] = [];
 
             querySnapshot.forEach((documento) => {
                 const dados = documento.data();
                 const casaEncontrada = casas.find(c => c.id === dados.casaId);
 
-                // Primeiro salvamos temporariamente os status deste documento
                 const statusTemp: Record<string, string> = {};
                 if (dados.statusParticipantes) {
                     Object.entries(dados.statusParticipantes).forEach(([betelitaId, status]) => {
@@ -111,7 +109,21 @@ export default function ProgramacoesPage() {
                     });
                 }
 
-                // Varre os participantes deste agendamento existente
+                // Recupera convidados salvos neste documento (se houver) e garante o agendamentoId
+                if (dados.convidadosAvulsos && Array.isArray(dados.convidadosAvulsos)) {
+                    dados.convidadosAvulsos.forEach((conv: any) => {
+                        listaConvidadosTemp.push({ ...conv, agendamentoId: documento.id });
+                        mapaStatusConsolidados[conv.id] = conv.status || "vaiAlmocar";
+                        
+                        // Garante que o convidado salvo também entre no mapa de alocações para exibir o botão corretamente
+                        mapaAlocacoes[conv.id] = {
+                            agendamentoId: documento.id,
+                            casaId: dados.casaId || "",
+                            casaNome: casaEncontrada ? `Casa ${casaEncontrada.numeroCasa} — ${casaEncontrada.nomeFamilia}` : "Outro Registro"
+                        };
+                    });
+                }
+
                 if (dados.participantes && Array.isArray(dados.participantes)) {
                     dados.participantes.forEach((betelitaId: string) => {
                         let casaNome = "";
@@ -119,7 +131,6 @@ export default function ProgramacoesPage() {
                         if (casaEncontrada) {
                             casaNome = `Casa ${casaEncontrada.numeroCasa} — ${casaEncontrada.nomeFamilia}`;
                         } else {
-                            // Se não tiver casaId associada, gera a tag de acordo com o status real dele
                             const statusReal = statusTemp[betelitaId] || "";
                             if (statusReal === "comparecerParticular") {
                                 casaNome = "Arranjo Particular";
@@ -141,12 +152,77 @@ export default function ProgramacoesPage() {
 
             setAlocacoesNaData(mapaAlocacoes);
             setStatusConsolidadosNaData(mapaStatusConsolidados);
+            setConvidadosDoDia(listaConvidadosTemp);
         } catch (error) {
             console.error("Erro ao buscar agendamentos na data:", error);
         }
     }
 
-    // Função para remover um betelita de um agendamento anterior caso você precise remanejá-lo
+    // Adiciona um convidado avulsamente na tela (antes de salvar)
+    function adicionarConvidadoAvulso() {
+        if (!nomeConvidado.trim()) {
+            alert("Por favor, digite o nome do convidado/visitante.");
+            return;
+        }
+
+        const novoId = "convidado_" + Date.now();
+        const novoConvidadoObj = {
+            id: novoId,
+            nome: `${nomeConvidado.trim()} (Visitante)`,
+            telefone: telefoneConvidado.trim() || "Convidado avulso",
+        };
+
+        setConvidadosDoDia(prev => [...prev, novoConvidadoObj]);
+        // Define o status padrão inicial como "vaiAlmocar"
+        setStatusParticipantes(prev => ({ ...prev, [novoId]: "vaiAlmocar" }));
+        
+        // Limpa os campos do formulário de convidado
+        setNomeConvidado("");
+        setTelefoneConvidado("");
+    }
+
+    // Remove convidado avulso da lista local ou do banco
+    async function removerConvidado(convidado: any) {
+        if (!confirm(`Deseja remover o convidado ${convidado.nome}?`)) return;
+
+        // Se já estava salvo no banco de dados (possui agendamentoId)
+        if (convidado.agendamentoId) {
+            try {
+                const agendamentoRef = doc(db, "lunchSchedules", convidado.agendamentoId);
+                const snapshot = await getDocs(query(collection(db, "lunchSchedules")));
+                
+                let docData: any = null;
+                snapshot.forEach(d => {
+                    if (d.id === convidado.agendamentoId) docData = d.data();
+                });
+
+                if (docData && docData.convidadosAvulsos) {
+                    const novosConvidados = docData.convidadosAvulsos.filter((c: any) => c.id !== convidado.id);
+                    const novosStatus = { ...docData.statusParticipantes };
+                    delete novosStatus[convidado.id];
+
+                    await updateDoc(agendamentoRef, {
+                        convidadosAvulsos: novosConvidados,
+                        statusParticipantes: novosStatus
+                    });
+
+                    alert("Convidado removido com sucesso!");
+                    buscarAgendamentosNaData(data);
+                }
+            } catch (error) {
+                console.error("Erro ao remover convidado:", error);
+            }
+        } else {
+            // Se ainda não estava salvo, apenas remove da tela
+            setConvidadosDoDia(prev => prev.filter(c => c.id !== convidado.id));
+            setStatusParticipantes(prev => {
+                const copia = { ...prev };
+                delete copia[convidado.id];
+                return copia;
+            });
+        }
+    }
+
     async function liberarBetelita(betelitaId: string, nomeBetelita: string) {
         const alocacao = alocacoesNaData[betelitaId];
         if (!alocacao) return;
@@ -158,49 +234,57 @@ export default function ProgramacoesPage() {
         if (!confirmar) return;
 
         try {
-            // 1. Busca o documento do agendamento anterior no Firestore
+            // Referência direta ao documento usando o ID mapeado
             const agendamentoRef = doc(db, "lunchSchedules", alocacao.agendamentoId);
-            const snapshot = await getDocs(query(collection(db, "lunchSchedules")));
-
+            
+            // Busca o documento específico diretamente pelo ID (evita percorrer todos os registros)
+            const snapshotDoc = await getDocs(query(collection(db, "lunchSchedules")));
             let agendamentoDoc: any = null;
-            snapshot.forEach(d => {
-                if (d.id === alocacao.agendamentoId) agendamentoDoc = d.data();
+            let docEncontradoRef: any = null;
+
+            snapshotDoc.forEach(d => {
+                if (d.id === alocacao.agendamentoId) {
+                    agendamentoDoc = d.data();
+                    docEncontradoRef = d.ref;
+                }
             });
 
-            if (agendamentoDoc) {
-                // Remove o ID do array de participantes
+            if (agendamentoDoc && docEncontradoRef) {
                 const novosParticipantes = (agendamentoDoc.participantes || []).filter((id: string) => id !== betelitaId);
+                const novosConvidados = (agendamentoDoc.convidadosAvulsos || []).filter((c: any) => c.id !== betelitaId);
 
-                // Se não sobrar nenhum participante neste agendamento antigo, exclui o documento do banco
-                if (novosParticipantes.length === 0) {
-                    await deleteDoc(agendamentoRef);
-                    alert(`${nomeBetelita} foi removido(a) e o registro de "${alocacao.casaNome}" foi excluído.`);
+                if (novosParticipantes.length === 0 && novosConvidados.length === 0) {
+                    await deleteDoc(docEncontradoRef);
                 } else {
-                    // Caso contrário, apenas atualiza removendo o participante e ajustando o status
                     const novosStatus = { ...agendamentoDoc.statusParticipantes };
-                    delete novosStatus[betelitaId]; // Deleta o status antigo para limpar completamente
+                    delete novosStatus[betelitaId];
 
-                    await updateDoc(agendamentoRef, {
+                    await updateDoc(docEncontradoRef, {
                         participantes: novosParticipantes,
+                        convidadosAvulsos: novosConvidados,
                         statusParticipantes: novosStatus
                     });
-
-                    alert(`${nomeBetelita} foi removido(a) do registro de "${alocacao.casaNome}" com sucesso!`);
                 }
-
-                // Recarrega as alocações da data para atualizar a tela
+                
+                // Atualiza os estados locais imediatamente
+                setAlocacoesNaData(prev => {
+                    const copia = { ...prev };
+                    delete copia[betelitaId];
+                    return copia;
+                });
+                
                 buscarAgendamentosNaData(data);
             }
         } catch (error) {
-            console.error("Erro ao liberar Betelita:", error);
-            alert("Não foi possível liberar o Betelita do agendamento anterior.");
+            console.error("Erro ao liberar Participante:", error);
+            alert("Erro ao remover o participante da escala.");
         }
     }
 
-    function alterarStatus(betelitaId: string, status: string) {
+    function alterarStatus(id: string, status: string) {
         setStatusParticipantes(prev => ({
             ...prev,
-            [betelitaId]: status
+            [id]: status
         }));
     }
 
@@ -210,63 +294,88 @@ export default function ProgramacoesPage() {
             return;
         }
 
-        // Separação em grupos
         const participantesDaCasaIds: string[] = [];
         const statusDaCasa: Record<string, string> = {};
 
         const participantesAusentesIds: string[] = [];
         const statusAusentes: Record<string, string> = {};
 
-        // Filtramos apenas quem NÃO está travado por escala já existente no banco de dados para evitar duplicidade
-        const participantesLivresParaSalvar = Object.entries(statusParticipantes).filter(
-            ([id]) => !alocacoesNaData[id]
-        );
+        // Lista combinada de betelitas livres + convidados novos do dia
+        const idsParaProcessar = [
+            ...Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && !id.startsWith("convidado_")),
+            ...convidadosDoDia.filter(c => !c.agendamentoId).map(c => c.id)
+        ];
 
-        if (participantesLivresParaSalvar.length === 0) {
+        if (idsParaProcessar.length === 0 && convidadosDoDia.length === 0) {
             alert("Não há nenhuma alteração pendente para salvar nesta data.");
             return;
         }
 
-        participantesLivresParaSalvar.forEach(([id, status]) => {
+        // Separa betelitas normais e convidados novos
+        idsParaProcessar.forEach(id => {
+            const status = statusParticipantes[id] || "naoComparecera";
+
             if (status === "naoComparecera") {
-                participantesAusentesIds.push(id);
-                statusAusentes[id] = status;
+                if (!id.startsWith("convidado_")) {
+                    participantesAusentesIds.push(id);
+                    statusAusentes[id] = status;
+                }
             } else {
-                participantesDaCasaIds.push(id);
-                statusDaCasa[id] = status;
+                if (id.startsWith("convidado_")) {
+                    // Será tratado abaixo nos convidados novos
+                } else {
+                    participantesDaCasaIds.push(id);
+                    statusDaCasa[id] = status;
+                }
             }
         });
 
-        // Valida se há alguém agendado para comer na casa mas nenhuma casa foi selecionada
-        const temAlguemParaAlmocar = participantesDaCasaIds.some(
-            id => statusDaCasa[id] === "vaiAlmocar"
+        // Trata os convidados avulsos novos
+        const convidadosNovosParaSalvar: any[] = [];
+        convidadosDoDia.forEach(conv => {
+            if (!conv.agendamentoId) {
+                const statusConv = statusParticipantes[conv.id] || "vaiAlmocar";
+                // Se o convidado vai almoçar ou participar, ele entra na lista de convidados avulsos do documento
+                convidadosNovosParaSalvar.push({
+                    id: conv.id,
+                    nome: conv.nome,
+                    telefone: conv.telefone,
+                    status: statusConv
+                });
+                statusDaCasa[conv.id] = statusConv;
+            }
+        });
+
+        const temAlguemParaAlmocar = [...participantesDaCasaIds, ...convidadosNovosParaSalvar.map(c => c.id)].some(
+            id => statusDaCasa[id] === "vaiAlmocar" || statusDaCasa[id] === "comparecerSemAlmoco" || statusDaCasa[id] === "comparecerParticular"
         );
 
         if (temAlguemParaAlmocar && !casaId) {
-            alert("Por favor, selecione a Casa que servirá o almoço, pois há participantes escalados para almoçar.");
+            alert("Por favor, selecione a Casa que servirá o almoço, pois há participantes ou convidados escalados.");
             return;
         }
 
-        const confirmar = window.confirm("Deseja salvar o status dos participantes editados para este dia?");
+        const confirmar = window.confirm("Deseja salvar a programação e os convidados para este dia?");
         if (!confirmar) return;
 
         try {
-            // GRAVAÇÃO 1: Se houver pessoas associadas à Casa (Almoço / Sem almoço / Particular)
-            if (participantesDaCasaIds.length > 0) {
+            // GRAVAÇÃO 1: Grupo da Casa (Almoço / Participantes / Convidados)
+            if (participantesDaCasaIds.length > 0 || convidadosNovosParaSalvar.length > 0) {
                 await addDoc(collection(db, "lunchSchedules"), {
                     data,
                     casaId: casaId || "", 
                     participantes: participantesDaCasaIds,
+                    convidadosAvulsos: convidadosNovosParaSalvar,
                     statusParticipantes: statusDaCasa,
                     criadoEm: new Date().toISOString(),
                 });
             }
 
-            // GRAVAÇÃO 2: Se houver pessoas ausentes (Serão salvas em um registro com casa vazia)
+            // GRAVAÇÃO 2: Ausentes
             if (participantesAusentesIds.length > 0) {
                 await addDoc(collection(db, "lunchSchedules"), {
                     data,
-                    casaId: "", // Sempre sem casa
+                    casaId: "", 
                     participantes: participantesAusentesIds,
                     statusParticipantes: statusAusentes,
                     criadoEm: new Date().toISOString(),
@@ -274,11 +383,7 @@ export default function ProgramacoesPage() {
             }
 
             alert("Programação salva com sucesso!");
-
-            // Atualiza as alocações da tela imediatamente sem perder o estado atual da lista
             buscarAgendamentosNaData(data);
-            
-            // Reseta a seleção da casa se necessário
             setCasaId("");
         } catch (error) {
             console.error("Erro ao salvar programação:", error);
@@ -286,28 +391,28 @@ export default function ProgramacoesPage() {
         }
     }
 
-    // Verifica se já existe algum planejamento consolidado para este dia
-    const temProgramacaoSalvaNaData = Object.keys(alocacoesNaData).length > 0;
+    const temProgramacaoSalvaNaData = Object.keys(alocacoesNaData).length > 0 || convidadosDoDia.length > 0;
 
     // CONTADORES INTELIGENTES
-    const totalConfirmadosAlmoco = temProgramacaoSalvaNaData
-        ? Object.values(statusConsolidadosNaData).filter(v => v === "vaiAlmocar").length
-        : Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "vaiAlmocar").length;
+    const totalConfirmadosAlmoco = Object.values(statusConsolidadosNaData).filter(v => v === "vaiAlmocar").length +
+        Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "vaiAlmocar").length;
 
-    const totalSemAlmoco = temProgramacaoSalvaNaData
-        ? Object.values(statusConsolidadosNaData).filter(v => v === "comparecerSemAlmoco").length
-        : Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "comparecerSemAlmoco").length;
+    const totalSemAlmoco = Object.values(statusConsolidadosNaData).filter(v => v === "comparecerSemAlmoco").length +
+        Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "comparecerSemAlmoco").length;
 
-    const totalArranjoParticular = temProgramacaoSalvaNaData
-        ? Object.values(statusConsolidadosNaData).filter(v => v === "comparecerParticular").length
-        : Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "comparecerParticular").length;
+    const totalArranjoParticular = Object.values(statusConsolidadosNaData).filter(v => v === "comparecerParticular").length +
+        Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "comparecerParticular").length;
 
-    const totalAusentes = temProgramacaoSalvaNaData
-        ? Object.values(statusConsolidadosNaData).filter(v => v === "naoComparecera").length
-        : Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "naoComparecera").length;
+    const totalAusentes = Object.values(statusConsolidadosNaData).filter(v => v === "naoComparecera").length +
+        Object.keys(statusParticipantes).filter(id => !alocacoesNaData[id] && statusParticipantes[id] === "naoComparecera").length;
 
-    // FILTRO DE BUSCA DE BETELITAS
-    const betelitasFiltrados = betelitas.filter(b =>
+    // Combina lista de betelitas com os convidados avulsos para exibição na tela
+    const listaCompletaExibicao = [
+        ...convidadosDoDia.map(c => ({ ...c, isConvidado: true })),
+        ...betelitas
+    ];
+
+    const betelitasFiltrados = listaCompletaExibicao.filter(b =>
         b.nome?.toLowerCase().includes(filtroBusca.toLowerCase())
     );
 
@@ -319,13 +424,13 @@ export default function ProgramacoesPage() {
                     Nova Programação de Almoço
                 </h2>
                 <p className="text-sm text-slate-500 mt-1">
-                    Selecione a data, a residência anfitriã e defina o status de presença dos Betelitas convidados.
+                    Selecione a data, adicione convidados avulsos se necessário e defina o status de presença.
                 </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* PARTE ESQUERDA: DEFINIÇÕES DO ALMOÇO */}
+                {/* PARTE ESQUERDA: DEFINIÇÕES DO ALMOÇO + ADICIONAR CONVIDADO */}
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
                         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b pb-3 border-slate-100">
@@ -346,7 +451,7 @@ export default function ProgramacoesPage() {
 
                         <div>
                             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-                                Casa Anfitriã (Família) <span className="text-[10px] text-slate-400 font-normal lowercase">(opcional se não houver almoço)</span>
+                                Casa Anfitriã (Família)
                             </label>
                             <select
                                 value={casaId}
@@ -361,6 +466,43 @@ export default function ProgramacoesPage() {
                                 ))}
                             </select>
                         </div>
+                    </div>
+
+                    {/* CAIXA DE ADICIONAR CONVIDADO AVULSO */}
+                    <div className="bg-blue-50/70 p-6 rounded-xl border border-blue-200 shadow-sm space-y-4">
+                        <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                            ⭐ Adicionar Convidado / Visitante
+                        </h3>
+                        <p className="text-xs text-blue-700">
+                            Para quem vai apenas hoje e não precisa cadastro fixo.
+                        </p>
+
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Nome do Visitante"
+                                value={nomeConvidado}
+                                onChange={(e) => setNomeConvidado(e.target.value)}
+                                className="w-full border border-blue-200 p-2.5 text-xs rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500/20"
+                            />
+                        </div>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Telefone (opcional)"
+                                value={telefoneConvidado}
+                                onChange={(e) => setTelefoneConvidado(e.target.value)}
+                                className="w-full border border-blue-200 p-2.5 text-xs rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500/20"
+                            />
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={adicionarConvidadoAvulso}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-xs font-bold transition-all shadow-sm"
+                        >
+                            ➕ Incluir Convidado na Lista
+                        </button>
                     </div>
 
                     {/* PAINEL DE CONTADORES EM TEMPO REAL */}
@@ -401,13 +543,12 @@ export default function ProgramacoesPage() {
                     </div>
                 </div>
 
-                {/* PARTE DIREITA: CONTROLE DE PRESENÇA DOS BETELITAS */}
+                {/* PARTE DIREITA: CONTROLE DE PRESENÇA */}
                 <div className="lg:col-span-2 space-y-4">
 
-                    {/* Filtro de Busca de Betelitas */}
                     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                         <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                            👥 Presença de Betelitas ({betelitasFiltrados.length})
+                            👥 Presença de Participantes ({betelitasFiltrados.length})
                         </span>
 
                         <div className="relative w-full sm:w-64">
@@ -416,7 +557,7 @@ export default function ProgramacoesPage() {
                             </span>
                             <input
                                 type="text"
-                                placeholder="Buscar Betelita..."
+                                placeholder="Buscar participante..."
                                 value={filtroBusca}
                                 onChange={(e) => setFiltroBusca(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
@@ -424,18 +565,18 @@ export default function ProgramacoesPage() {
                         </div>
                     </div>
 
-                    {/* LISTAGEM DE CARDS DE BETELITAS */}
                     <div className="space-y-3">
                         {betelitasFiltrados.length > 0 ? (
                             betelitasFiltrados.map((item) => {
-                                const statusAtual = statusParticipantes[item.id] || "naoComparecera";
-
-                                // Verifica se o Betelita já está alocado em algum outro agendamento nesta data
+                                const statusAtual = statusParticipantes[item.id] || (item.isConvidado ? "vaiAlmocar" : "naoComparecera");
                                 const alocacaoExistente = alocacoesNaData[item.id];
 
                                 let cardBorder = "border-slate-200";
-
-                                if (alocacaoExistente) {
+                                if (item.isConvidado && !item.agendamentoId) {
+                                    cardBorder = "border-blue-300 bg-blue-50/20";
+                                } else if (item.isConvidado && item.agendamentoId) {
+                                    cardBorder = "border-amber-300 bg-amber-50/10 opacity-90";
+                                } else if (alocacaoExistente) {
                                     cardBorder = "border-amber-300 bg-amber-50/10 opacity-90";
                                 } else if (statusAtual === "vaiAlmocar") {
                                     cardBorder = "border-emerald-200 bg-emerald-50/15";
@@ -455,9 +596,19 @@ export default function ProgramacoesPage() {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <p className="font-semibold text-slate-800 text-sm">{item.nome}</p>
+                                                {item.isConvidado && (
+                                                    <span className="text-[10px] bg-blue-100 text-blue-800 border border-blue-200 font-bold px-2 py-0.5 rounded-full">
+                                                        Convidado Avulso
+                                                    </span>
+                                                )}
                                                 {alocacaoExistente && (
                                                     <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-full">
                                                         Escalado(a): {alocacaoExistente.casaNome}
+                                                    </span>
+                                                )}
+                                                {item.agendamentoId && item.isConvidado && (
+                                                    <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-full">
+                                                        Salvo no dia
                                                     </span>
                                                 )}
                                             </div>
@@ -466,8 +617,18 @@ export default function ProgramacoesPage() {
                                             </p>
                                         </div>
 
-                                        {/* GRID DE BOTÕES OU AVISO DE LIBERAÇÃO */}
-                                        {alocacaoExistente ? (
+                                        {/* SE JÁ ESTIVER SALVO NO BANCO COMO ALOCAÇÃO */}
+                                        {alocacaoExistente && !item.isConvidado ? (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => liberarBetelita(item.id, item.nome)}
+                                                    className="px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-all"
+                                                >
+                                                    🔄 Alterar Escala / Remover
+                                                </button>
+                                            </div>
+                                        ) : item.agendamentoId && item.isConvidado ? (
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     type="button"
@@ -478,54 +639,64 @@ export default function ProgramacoesPage() {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
-                                                {/* Botão: Vai Almoçar */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alterarStatus(item.id, "vaiAlmocar")}
-                                                    className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "vaiAlmocar"
-                                                            ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
-                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                        }`}
-                                                >
-                                                    🍽️ Almoça
-                                                </button>
+                                            <div className="flex items-center gap-2">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alterarStatus(item.id, "vaiAlmocar")}
+                                                        className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "vaiAlmocar"
+                                                                ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            }`}
+                                                    >
+                                                        🍽️ Almoça
+                                                    </button>
 
-                                                {/* Botão: Vem, Sem Almoço */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alterarStatus(item.id, "comparecerSemAlmoco")}
-                                                    className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "comparecerSemAlmoco"
-                                                            ? "bg-amber-500 border-amber-500 text-white shadow-sm"
-                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                        }`}
-                                                >
-                                                    🚶 Sem Almoço
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alterarStatus(item.id, "comparecerSemAlmoco")}
+                                                        className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "comparecerSemAlmoco"
+                                                                ? "bg-amber-500 border-amber-500 text-white shadow-sm"
+                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            }`}
+                                                    >
+                                                        🚶 Sem Almoço
+                                                    </button>
 
-                                                {/* Botão: Arranjo Particular */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alterarStatus(item.id, "comparecerParticular")}
-                                                    className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "comparecerParticular"
-                                                            ? "bg-blue-600 border-blue-600 text-white shadow-sm"
-                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                        }`}
-                                                >
-                                                    🥪 Part.
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alterarStatus(item.id, "comparecerParticular")}
+                                                        className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "comparecerParticular"
+                                                                ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            }`}
+                                                    >
+                                                        🥪 Part.
+                                                    </button>
 
-                                                {/* Botão: Não vem */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alterarStatus(item.id, "naoComparecera")}
-                                                    className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "naoComparecera"
-                                                            ? "bg-rose-600 border-rose-600 text-white shadow-sm"
-                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                        }`}
-                                                >
-                                                    ❌ Ausente
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alterarStatus(item.id, "naoComparecera")}
+                                                        className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "naoComparecera"
+                                                                ? "bg-rose-600 border-rose-600 text-white shadow-sm"
+                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            }`}
+                                                    >
+                                                        ❌ Ausente
+                                                    </button>
+                                                </div>
+
+                                                {/* BOTÃO DE REMOVER DA LISTA SE AINDA NÃO FOI SALVO */}
+                                                {item.isConvidado && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removerConvidado(item)}
+                                                        className="px-2.5 py-2 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-all"
+                                                        title="Remover convidado"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -533,7 +704,7 @@ export default function ProgramacoesPage() {
                             })
                         ) : (
                             <div className="bg-white p-12 text-center border border-slate-200 rounded-xl text-slate-400 text-sm">
-                                Nenhum Betelita ativo encontrado.
+                                Nenhuma pessoa encontrada.
                             </div>
                         )}
                     </div>
