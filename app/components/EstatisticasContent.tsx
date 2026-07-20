@@ -10,7 +10,17 @@ interface EstatisticaCasa {
   betelitas: string[];
 }
 
-export default function EstatisticasPage() {
+interface Almoço {
+  casa: string;
+  data: string;
+  betelitas: string[];
+}
+
+interface EstatisticasContentProps {
+  historicoAlmoco: Almoço[]; // <-- Adicione esta linha nas propriedades aceitas pelo componente
+}
+
+export default function EstatisticasPage({ historicoAlmoco }: EstatisticasContentProps) {
   const [estatisticas, setEstatisticas] = useState<Record<string, EstatisticaCasa>>({});
   const [loading, setLoading] = useState(true);
 
