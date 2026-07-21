@@ -9,6 +9,7 @@ import { Phone, Utensils, Home } from "lucide-react";
 interface ProgramacaoRealizada {
   id: string;
   data: string;
+  dataFim?: string;
   casaId: string;
   casaNome: string;
   casaNumero: string;
@@ -146,24 +147,36 @@ export default function Dashboard() {
         const dataAgendada = dados.data || dados.dataInicio || "";
 
         const participantesDoc = dados.participantes || [];
+        const convidadosDoc = dados.convidadosAvulsos || [];
         const statusMap = dados.statusParticipantes || {};
 
-        if (dataAgendada) {
-          const chaveAgrupamento = idProcurado ? `${dataAgendada}_${idProcurado}` : `particular_${doc.id}`;
+        // Junta IDs de betelitas e IDs de convidados avulsos para processar juntos
+        const todosIds = [
+          ...participantesDoc,
+          ...convidadosDoc.map((c: any) => c.id)
+        ];
 
-          const casa = dicionarioCasas[idProcurado] || {};
-          
-          let statusPrimeiroParticipante = "naoComparecer";
-          if (participantesDoc.length > 0) {
-            statusPrimeiroParticipante = statusMap[participantesDoc[0]] || "naoComparecer";
-            if (!idProcurado && statusPrimeiroParticipante === "comparecerParticular") {
-              statusPrimeiroParticipante = "naoComparecer";
-            }
+        if (dataAgendada && todosIds.length > 0) {
+          const novosParticipantes = todosIds
+            .map((id: string) => {
+              const statusBruto = statusMap[id] || "naoComparecera";
+              return { nome: obterNomeParticipante(id), status: statusBruto };
+            })
+            .filter((p: { nome: string; status: string }) => {
+              const st = p.status.toLowerCase();
+              return !st.includes("naocomparecer");
+            });
+
+          if (novosParticipantes.length === 0) {
+            return;
           }
 
+          const chaveAgrupamento = idProcurado ? `${dataAgendada}_${idProcurado}` : `particular_${doc.id}`;
+          const casa = dicionarioCasas[idProcurado] || {};
+          
           const casaNomeFamilia = idProcurado && casa.nomeFamilia 
             ? casa.nomeFamilia 
-            : (idProcurado ? "Sem Nome" : obterStatusInfoAlmoco(statusPrimeiroParticipante).label);
+            : (idProcurado ? "Sem Nome" : "Almoço Particular");
 
           const logradouro = casa.logradouro || "";
           const casaNumero = casa.numeroEndereco ? ` - ${casa.numeroEndereco}` : "";
@@ -173,14 +186,6 @@ export default function Dashboard() {
           const enderecoCompleto = casa.logradouro ? `${logradouro}${casaNumero}${bairro}${cidade}` : "";
           const endereco = enderecoCompleto ? enderecoCompleto.replace(", ,", ",").replace(" - ,", "") : "";
           const telefone = casa.telefone || "";
-
-          const novosParticipantes = participantesDoc.map((betelitaId: string) => {
-            let status = statusMap[betelitaId] || "naoComparecer";
-            if (!idProcurado && status === "comparecerParticular") {
-              status = "naoComparecer";
-            }
-            return { nome: obterNomeParticipante(betelitaId), status };
-          });
 
           if (agrupadosAlmoco[chaveAgrupamento]) {
             novosParticipantes.forEach((novo: any) => {
@@ -213,10 +218,32 @@ export default function Dashboard() {
         if (idProcurado && typeof idProcurado !== "string") idProcurado = idProcurado.id;
 
         const dataAgendada = dados.dataInicio || dados.data || "";
+        const dataFimAgendada = dados.dataFim || "";
         const listaParticipantesIds = dados.participantes || [];
+        const convidadosDoc = dados.convidadosAvulsos || [];
+        const statusMap = dados.statusParticipantes || {};
 
-        if (dataAgendada) {
-          const chaveAgrupamento = idProcurado ? `${dataAgendada}_${idProcurado}` : `particular_${doc.id}`;
+        const todosIds = [
+          ...listaParticipantesIds,
+          ...convidadosDoc.map((c: any) => c.id)
+        ];
+
+        if (dataAgendada && todosIds.length > 0) {
+          const novosParticipantes = todosIds
+            .map((id: string) => {
+              const status = statusMap[id] || (!idProcurado ? "hospedagemParticular" : "vaiHospedar");
+              return { nome: obterNomeParticipante(id), status };
+            })
+            .filter((p: { nome: string; status: string }) => {
+              const st = p.status.toLowerCase();
+              return !st.includes("naocomparecer");
+            });
+
+          if (novosParticipantes.length === 0) {
+            return;
+          }
+
+          const chaveAgrupamento = idProcurado ? `${dataAgendada}_${dataFimAgendada}_${idProcurado}` : `particular_${doc.id}`;
           const casa = dicionarioCasas[idProcurado] || {};
           const casaNomeFamilia = casa.nomeFamilia || (idProcurado ? "Sem Nome" : "Hospedagem Particular");
           const logradouro = casa.logradouro || "";
@@ -228,11 +255,6 @@ export default function Dashboard() {
           const endereco = enderecoCompleto ? enderecoCompleto.replace(", ,", ",").replace(" - ,", "") : "";
           const telefone = casa.telefone || "";
 
-          const novosParticipantes = listaParticipantesIds.map((betelitaId: string) => {
-            const status = dados.statusParticipantes?.[betelitaId] || (!idProcurado ? "hospedagemParticular" : "vaiHospedar");
-            return { nome: obterNomeParticipante(betelitaId), status };
-          });
-
           if (agrupadosHospedagem[chaveAgrupamento]) {
             novosParticipantes.forEach((novo: any) => {
               if (!agrupadosHospedagem[chaveAgrupamento].participantesDetalhados.some(e => e.nome === novo.nome)) {
@@ -243,6 +265,7 @@ export default function Dashboard() {
             agrupadosHospedagem[chaveAgrupamento] = {
               id: doc.id,
               data: dataAgendada,
+              dataFim: dataFimAgendada,
               casaId: idProcurado,
               casaNome: casaNomeFamilia,
               casaNumero: String(casaNumero),
@@ -426,7 +449,9 @@ export default function Dashboard() {
                     </span>
 
                     <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">
-                      Data: {formatarDataCurta(prog.data)}
+                      {tipoVisualizacao === "hospedagem" && prog.dataFim
+                        ? `Período: ${formatarDataCurta(prog.data)} até ${formatarDataCurta(prog.dataFim)}`
+                        : `Data: ${formatarDataCurta(prog.data)}`}
                     </span>
                   </div>
 
