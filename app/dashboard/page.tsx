@@ -4,17 +4,17 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import StatCard from "../components/StatCard";
-import { Phone } from "lucide-react";
+import { Phone, Utensils, Home } from "lucide-react";
 
 interface ProgramacaoRealizada {
   id: string;
   data: string;
-  casaId: string; // Chave para agruparmos
+  casaId: string;
   casaNome: string;
   casaNumero: string;
   casaFamilia: string;
   endereco: string;
-  complemento?: string; // O "?" torna o campo opcional, evitando erros em registros antigos
+  complemento?: string;
   telefone: string;
   participantesDetalhados: Array<{
     nome: string;
@@ -25,10 +25,15 @@ interface ProgramacaoRealizada {
 export default function Dashboard() {
   const [totalCasas, setTotalCasas] = useState(0);
   const [totalBetelitas, setTotalBetelitas] = useState(0);
-  const [programacoes, setProgramacoes] = useState<ProgramacaoRealizada[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  const [programacoesAlmoco, setProgramacoesAlmoco] = useState<ProgramacaoRealizada[]>([]);
+  const [programacoesHospedagem, setProgramacoesHospedagem] = useState<ProgramacaoRealizada[]>([]);
+
+  const [tipoVisualizacao, setTipoVisualizacao] = useState<"almoco" | "hospedagem">("almoco");
+
+  const [loading, setLoading] = useState(true);
   const [menuTelefoneAberto, setMenuTelefoneAberto] = useState<string | null>(null);
+
   const limparTelefone = (tel: string) => tel.replace(/\D/g, "");
 
   useEffect(() => {
@@ -40,41 +45,16 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // Função que fecha o menu se o clique não for no elemento do botão
     function fecharAoClicarFora(event: MouseEvent) {
       if (menuTelefoneAberto && !(event.target as HTMLElement).closest('.btn-telefone-container')) {
         setMenuTelefoneAberto(null);
       }
     }
-
-    // Adiciona o listener
     document.addEventListener("mousedown", fecharAoClicarFora);
-
-    // Remove o listener quando o componente é desmontado
     return () => {
       document.removeEventListener("mousedown", fecharAoClicarFora);
     };
   }, [menuTelefoneAberto]);
-
-
-
-  // Formata a data de AAAA-MM-DD para DD/MM/AAAA por extenso
-  function formatarDataExtenso(dataString: string) {
-    if (!dataString) return "";
-    const partes = dataString.split("-");
-    if (partes.length !== 3) return dataString;
-
-    const meses = [
-      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-    ];
-
-    const dia = partes[2];
-    const mes = meses[parseInt(partes[1]) - 1];
-    const ano = partes[0];
-
-    return `${dia} de ${mes} de ${ano}`;
-  }
 
   function formatarDataCurta(dataString: string) {
     if (!dataString) return "";
@@ -83,17 +63,28 @@ export default function Dashboard() {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
   }
 
-  // Retorna os ícones e rótulos amigáveis do status de almoço
-  function obterStatusInfo(status: string) {
+  function obterStatusInfoAlmoco(status: string) {
     switch (status) {
       case "vaiAlmocar":
-        return { label: "Almoça na Casa", icone: "🍽️", classe: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" };
+        return { label: "Almoça na Casa", icone: "🍽️", classe: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", ordem: 1 };
       case "comparecerSemAlmoco":
-        return { label: "Visita sem Almoço", icone: "🚶", classe: "bg-amber-500/20 text-amber-300 border-amber-500/30" };
+        return { label: "Visita sem Almoço", icone: "🚶", classe: "bg-amber-500/20 text-amber-300 border-amber-500/30", ordem: 2 };
       case "comparecerParticular":
-        return { label: "Almoço Particular", icone: "🥪", classe: "bg-blue-500/20 text-blue-300 border-blue-500/30" };
+        return { label: "Almoço Particular", icone: "🥪", classe: "bg-blue-500/20 text-blue-300 border-blue-500/30", ordem: 3 };
       default:
-        return { label: "Não Comparecerá", icone: "❌", classe: "bg-rose-500/20 text-rose-300 border-rose-500/30" };
+        return { label: "Não Comparecerá", icone: "❌", classe: "bg-rose-500/20 text-rose-300 border-rose-500/30", ordem: 4 };
+    }
+  }
+
+  function obterStatusInfoHospedagem(status: string) {
+    switch (status) {
+      case "vaiHospedar":
+      case "hospedado":
+        return { label: "Hospedado na Casa", icone: "🛏️", classe: "bg-purple-500/20 text-purple-300 border-purple-500/30" };
+      case "hospedagemParticular":
+        return { label: "Hospedagem Particular", icone: "🏠", classe: "bg-blue-500/20 text-blue-300 border-blue-500/30" };
+      default:
+        return { label: "Hospedagem Confirmada", icone: "🛏️", classe: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30" };
     }
   }
 
@@ -101,30 +92,28 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      const [casasSnapshot, betelitasSnapshot, programacoesSnapshot] = await Promise.all([
+      const [casasSnapshot, betelitasSnapshot, programacoesSnapshot, hospedagensSnapshot] = await Promise.all([
         getDocs(collection(db, "houses")),
         getDocs(collection(db, "betelitas")),
-        getDocs(collection(db, "lunchSchedules"))
+        getDocs(collection(db, "lunchSchedules")),
+        getDocs(collection(db, "accommodationSchedules"))
       ]);
 
       setTotalCasas(casasSnapshot.size);
       setTotalBetelitas(betelitasSnapshot.size);
 
-      // Mapeia as casas
       const dicionarioCasas: Record<string, any> = {};
       casasSnapshot.forEach((doc) => {
         dicionarioCasas[doc.id] = { id: doc.id, ...doc.data() };
       });
 
-      // Mapeia os betelitas
       const dicionarioBetelitas: Record<string, any> = {};
       betelitasSnapshot.forEach((doc) => {
         dicionarioBetelitas[doc.id] = { id: doc.id, ...doc.data() };
       });
 
-      // Mapeia nomes de convidados avulsos encontrados em todos os documentos de agendamento
       const dicionarioConvidados: Record<string, string> = {};
-      programacoesSnapshot.forEach((doc) => {
+      [...programacoesSnapshot.docs, ...hospedagensSnapshot.docs].forEach((doc) => {
         const dados = doc.data();
         if (dados.convidadosAvulsos && Array.isArray(dados.convidadosAvulsos)) {
           dados.convidadosAvulsos.forEach((conv: any) => {
@@ -135,156 +124,72 @@ export default function Dashboard() {
         }
       });
 
-      // 1ª PASSAGEM: Mapear quais Betelitas/Convidados estão ativamente escalados em alguma casa por Data
-      const betelitasComCasaPorData: Record<string, Set<string>> = {};
-
-      programacoesSnapshot.forEach((doc) => {
-        const dados = doc.data();
-        let idProcurado = dados.casaId || "";
-        if (idProcurado && typeof idProcurado !== "string") {
-          idProcurado = idProcurado.id;
-        }
-
-        const dataAgendada = dados.data || "";
-
-        if (idProcurado) {
-          if (!betelitasComCasaPorData[dataAgendada]) {
-            betelitasComCasaPorData[dataAgendada] = new Set();
-          }
-          const listaIds = dados.participantes || [];
-          listaIds.forEach((id: string) => {
-            betelitasComCasaPorData[dataAgendada].add(id);
-          });
-          // Adiciona também os convidados avulsos vinculados a esta casa
-          if (dados.convidadosAvulsos && Array.isArray(dados.convidadosAvulsos)) {
-            dados.convidadosAvulsos.forEach((conv: any) => {
-              betelitasComCasaPorData[dataAgendada].add(conv.id);
-            });
-          }
-        }
-      });
-
-      // Dicionário temporário para agrupar as exibições finais
-      const agrupados: Record<string, ProgramacaoRealizada> = {};
-
-      // 2ª PASSAGEM: Construir os agrupamentos respeitando as prioridades
-      programacoesSnapshot.forEach((doc) => {
-        const dados = doc.data();
-        let idProcurado = dados.casaId || "";
-        if (idProcurado && typeof idProcurado !== "string") {
-          idProcurado = idProcurado.id;
-        }
-
-        const dataAgendada = dados.data || "";
-
-        // Reconstrói a lista de participantes do documento (incluindo convidados avulsos)
-        const listaParticipantesIds = dados.participantes || [];
-        if (dados.convidadosAvulsos && Array.isArray(dados.convidadosAvulsos)) {
-          dados.convidadosAvulsos.forEach((conv: any) => {
-            if (!listaParticipantesIds.includes(conv.id)) {
-              listaParticipantesIds.push(conv.id);
-            }
-          });
-        }
-
-        if (listaParticipantesIds.length === 0 && dados.statusParticipantes) {
-          Object.keys(dados.statusParticipantes).forEach((id) => {
-            if (!listaParticipantesIds.includes(id)) {
-              listaParticipantesIds.push(id);
-            }
-          });
-        }
-
-        // Função auxiliar para resolver o nome correto do participante/convidado
-        function obterNomeParticipante(id: string) {
-          let nomeBruto = "";
-          if (dicionarioBetelitas[id]) {
-            nomeBruto = dicionarioBetelitas[id].nome;
-          } else if (dicionarioConvidados[id]) {
-            nomeBruto = dicionarioConvidados[id];
-          } else {
-            return `Participante (ID: ${id.substring(0, 5)})`;
-          }
-
-          // Remove qualquer estrela ou emoji remanescente do nome
-          return nomeBruto.replace(/⭐\s*/g, "").trim();
-        }
-
-        // Se NÃO tem casa
-        if (!idProcurado) {
-          listaParticipantesIds.forEach((betelitaId: string) => {
-            if (betelitasComCasaPorData[dataAgendada]?.has(betelitaId)) {
-              return;
-            }
-
-            const status = dados.statusParticipantes?.[betelitaId] || "naoComparecera";
-            const statusInfo = obterStatusInfo(status);
-
-            const part = {
-              nome: obterNomeParticipante(betelitaId),
-              status: status,
-            };
-
-            const chaveAgrupamentoSemCasa = `${dataAgendada}_${status}_semcasa`;
-
-            if (agrupados[chaveAgrupamentoSemCasa]) {
-              const jaExiste = agrupados[chaveAgrupamentoSemCasa].participantesDetalhados.some(
-                (existente) => existente.nome === part.nome
-              );
-              if (!jaExiste) {
-                agrupados[chaveAgrupamentoSemCasa].participantesDetalhados.push(part);
-              }
-            } else {
-              agrupados[chaveAgrupamentoSemCasa] = {
-                id: `${doc.id}_${status}`,
-                data: dataAgendada,
-                casaId: "",
-                casaNome: statusInfo.label,
-                casaNumero: "",
-                casaFamilia: statusInfo.label,
-                endereco: "",
-                complemento: "",
-                telefone: "",
-                participantesDetalhados: [part],
-              };
-            }
-          });
+      function obterNomeParticipante(id: string) {
+        let nomeBruto = "";
+        if (dicionarioBetelitas[id]) {
+          nomeBruto = dicionarioBetelitas[id].nome;
+        } else if (dicionarioConvidados[id]) {
+          nomeBruto = dicionarioConvidados[id];
         } else {
-          // Se TEM casa, renderiza normalmente agrupando por Casa
-          const chaveAgrupamento = `${dataAgendada}_${idProcurado}`;
+          return `Participante (ID: ${id.substring(0, 5)})`;
+        }
+        return nomeBruto.replace(/⭐\s*/g, "").trim();
+      }
+
+      // Processar Almoços Agrupados por Data + Casa
+      const agrupadosAlmoco: Record<string, ProgramacaoRealizada> = {};
+
+      programacoesSnapshot.forEach((doc) => {
+        const dados = doc.data();
+        let idProcurado = dados.casaId || "";
+        if (idProcurado && typeof idProcurado !== "string") idProcurado = idProcurado.id;
+        const dataAgendada = dados.data || dados.dataInicio || "";
+
+        const participantesDoc = dados.participantes || [];
+        const statusMap = dados.statusParticipantes || {};
+
+        if (dataAgendada) {
+          const chaveAgrupamento = idProcurado ? `${dataAgendada}_${idProcurado}` : `particular_${doc.id}`;
+
           const casa = dicionarioCasas[idProcurado] || {};
-          const casaNomeFamilia = casa.nomeFamilia || "Sem Nome";
+          
+          let statusPrimeiroParticipante = "naoComparecer";
+          if (participantesDoc.length > 0) {
+            statusPrimeiroParticipante = statusMap[participantesDoc[0]] || "naoComparecer";
+            if (!idProcurado && statusPrimeiroParticipante === "comparecerParticular") {
+              statusPrimeiroParticipante = "naoComparecer";
+            }
+          }
+
+          const casaNomeFamilia = idProcurado && casa.nomeFamilia 
+            ? casa.nomeFamilia 
+            : (idProcurado ? "Sem Nome" : obterStatusInfoAlmoco(statusPrimeiroParticipante).label);
+
           const logradouro = casa.logradouro || "";
-          const casaNumero = casa.numeroEndereco ? ` - ${casa.numeroEndereco}` : ", S/N";
+          const casaNumero = casa.numeroEndereco ? ` - ${casa.numeroEndereco}` : "";
           const complemento = casa.complemento || "";
           const bairro = casa.bairro ? ` - ${casa.bairro}` : "";
           const cidade = casa.cidade ? `, ${casa.cidade}` : "";
-          const enderecoCompleto = casa.logradouro
-            ? `${logradouro}${casaNumero}${bairro}${cidade}`
-            : "Endereço não disponível";
+          const enderecoCompleto = casa.logradouro ? `${logradouro}${casaNumero}${bairro}${cidade}` : "";
+          const endereco = enderecoCompleto ? enderecoCompleto.replace(", ,", ",").replace(" - ,", "") : "";
+          const telefone = casa.telefone || "";
 
-          const endereco = enderecoCompleto.replace(", ,", ",").replace(" - ,", "");
-          const telefone = casa.telefone || "Telefone não disponível";
-
-          const novosParticipantes = listaParticipantesIds.map((betelitaId: string) => {
-            const status = dados.statusParticipantes?.[betelitaId] || "naoComparecera";
-            return {
-              nome: obterNomeParticipante(betelitaId),
-              status: status,
-            };
+          const novosParticipantes = participantesDoc.map((betelitaId: string) => {
+            let status = statusMap[betelitaId] || "naoComparecer";
+            if (!idProcurado && status === "comparecerParticular") {
+              status = "naoComparecer";
+            }
+            return { nome: obterNomeParticipante(betelitaId), status };
           });
 
-          if (agrupados[chaveAgrupamento]) {
+          if (agrupadosAlmoco[chaveAgrupamento]) {
             novosParticipantes.forEach((novo: any) => {
-              const jaExiste = agrupados[chaveAgrupamento].participantesDetalhados.some(
-                (existente) => existente.nome === novo.nome
-              );
-              if (!jaExiste) {
-                agrupados[chaveAgrupamento].participantesDetalhados.push(novo);
+              if (!agrupadosAlmoco[chaveAgrupamento].participantesDetalhados.some(e => e.nome === novo.nome)) {
+                agrupadosAlmoco[chaveAgrupamento].participantesDetalhados.push(novo);
               }
             });
           } else {
-            agrupados[chaveAgrupamento] = {
+            agrupadosAlmoco[chaveAgrupamento] = {
               id: doc.id,
               data: dataAgendada,
               casaId: idProcurado,
@@ -292,7 +197,7 @@ export default function Dashboard() {
               casaNumero: String(casaNumero),
               casaFamilia: casaNomeFamilia,
               endereco,
-              complemento: complemento,
+              complemento,
               telefone,
               participantesDetalhados: novosParticipantes,
             };
@@ -300,29 +205,107 @@ export default function Dashboard() {
         }
       });
 
-      // Converte o objeto agrupado de volta para array
-      let listaProgramacoes = Object.values(agrupados);
+      // Processar Hospedagens
+      const agrupadosHospedagem: Record<string, ProgramacaoRealizada> = {};
+      hospedagensSnapshot.forEach((doc) => {
+        const dados = doc.data();
+        let idProcurado = dados.casaId || "";
+        if (idProcurado && typeof idProcurado !== "string") idProcurado = idProcurado.id;
 
-      // Filtra para manter apenas a partir de hoje
-      const hoje = new Date().toISOString().split("T")[0];
-      listaProgramacoes = listaProgramacoes.filter(prog => prog.data >= hoje);
+        const dataAgendada = dados.dataInicio || dados.data || "";
+        const listaParticipantesIds = dados.participantes || [];
 
-      // Filtra para remover qualquer card de status que tenha ficado sem participantes reais
-      listaProgramacoes = listaProgramacoes.filter(prog => prog.participantesDetalhados.length > 0);
+        if (dataAgendada) {
+          const chaveAgrupamento = idProcurado ? `${dataAgendada}_${idProcurado}` : `particular_${doc.id}`;
+          const casa = dicionarioCasas[idProcurado] || {};
+          const casaNomeFamilia = casa.nomeFamilia || (idProcurado ? "Sem Nome" : "Hospedagem Particular");
+          const logradouro = casa.logradouro || "";
+          const casaNumero = casa.numeroEndereco ? ` - ${casa.numeroEndereco}` : (idProcurado ? ", S/N" : "");
+          const complemento = casa.complemento || "";
+          const bairro = casa.bairro ? ` - ${casa.bairro}` : "";
+          const cidade = casa.cidade ? `, ${casa.cidade}` : "";
+          const enderecoCompleto = casa.logradouro ? `${logradouro}${casaNumero}${bairro}${cidade}` : "";
+          const endereco = enderecoCompleto ? enderecoCompleto.replace(", ,", ",").replace(" - ,", "") : "";
+          const telefone = casa.telefone || "";
 
-      // Ordena: Primeiro por Data (mais recentes), depois por Casa (agendadas vs outros)
-      listaProgramacoes.sort((a, b) => {
-        const dataComparacao = b.data.localeCompare(a.data);
-        if (dataComparacao !== 0) return dataComparacao;
+          const novosParticipantes = listaParticipantesIds.map((betelitaId: string) => {
+            const status = dados.statusParticipantes?.[betelitaId] || (!idProcurado ? "hospedagemParticular" : "vaiHospedar");
+            return { nome: obterNomeParticipante(betelitaId), status };
+          });
 
-        if (!!a.casaId !== !!b.casaId) {
-          return a.casaId ? -1 : 1;
+          if (agrupadosHospedagem[chaveAgrupamento]) {
+            novosParticipantes.forEach((novo: any) => {
+              if (!agrupadosHospedagem[chaveAgrupamento].participantesDetalhados.some(e => e.nome === novo.nome)) {
+                agrupadosHospedagem[chaveAgrupamento].participantesDetalhados.push(novo);
+              }
+            });
+          } else {
+            agrupadosHospedagem[chaveAgrupamento] = {
+              id: doc.id,
+              data: dataAgendada,
+              casaId: idProcurado,
+              casaNome: casaNomeFamilia,
+              casaNumero: String(casaNumero),
+              casaFamilia: casaNomeFamilia,
+              endereco,
+              complemento,
+              telefone,
+              participantesDetalhados: novosParticipantes,
+            };
+          }
         }
+      });
 
+      const hojeDate = new Date();
+      const diaDaSemana = hojeDate.getDay();
+      const diffParaSegunda = diaDaSemana === 0 ? -6 : 1 - diaDaSemana;
+
+      const segundaFeiraDate = new Date(hojeDate);
+      segundaFeiraDate.setDate(hojeDate.getDate() + diffParaSegunda);
+      const dataInicioSemana = segundaFeiraDate.toISOString().split("T")[0];
+
+      const domingoDate = new Date(segundaFeiraDate);
+      domingoDate.setDate(segundaFeiraDate.getDate() + 6);
+      const dataFimSemana = domingoDate.toISOString().split("T")[0];
+
+      let listaAlmoco = Object.values(agrupadosAlmoco).filter(
+        prog => prog.data >= dataInicioSemana && prog.data <= dataFimSemana
+      );
+      listaAlmoco.forEach(prog => {
+        prog.participantesDetalhados.sort((a, b) => {
+          return obterStatusInfoAlmoco(a.status).ordem - obterStatusInfoAlmoco(b.status).ordem;
+        });
+      });
+
+      listaAlmoco.sort((a, b) => {
+        if (a.data !== b.data) {
+          return a.data.localeCompare(b.data);
+        }
+        const aTemCasa = Boolean(a.casaId);
+        const bTemCasa = Boolean(b.casaId);
+
+        if (aTemCasa && !bTemCasa) return -1;
+        if (!aTemCasa && bTemCasa) return 1;
         return 0;
       });
 
-      setProgramacoes(listaProgramacoes);
+      setProgramacoesAlmoco(listaAlmoco);
+
+      let listaHospedagem = Object.values(agrupadosHospedagem).filter(
+        prog => prog.data >= dataInicioSemana && prog.data <= dataFimSemana
+      );
+      listaHospedagem.sort((a, b) => {
+        if (a.data !== b.data) {
+          return a.data.localeCompare(b.data);
+        }
+        const aEhParticular = !a.casaId || a.casaFamilia.toLowerCase().includes("particular");
+        const bEhParticular = !b.casaId || b.casaFamilia.toLowerCase().includes("particular");
+
+        if (aEhParticular && !bEhParticular) return 1;
+        if (!aEhParticular && bEhParticular) return -1;
+        return 0;
+      });
+      setProgramacoesHospedagem(listaHospedagem);
 
     } catch (error) {
       console.error("Erro ao carregar dados do Dashboard:", error);
@@ -331,19 +314,44 @@ export default function Dashboard() {
     }
   }
 
+  const programacoesAtuais = tipoVisualizacao === "almoco" ? programacoesAlmoco : programacoesHospedagem;
+
   return (
     <div className="p-8 max-w-7xl w-full mx-auto space-y-8">
-      {/* Título da Página */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight font-sans">
-          Visão Geral do Almoço
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Acompanhe o painel de distribuição, contagem de betelitas e controle de casas ativas.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight font-sans">
+            {tipoVisualizacao === "almoco" ? "Visão Geral do Almoço" : "Visão Geral da Hospedagem"}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {tipoVisualizacao === "almoco"
+              ? "Acompanhe o painel de distribuição, contagem de betelitas e controle de casas ativas (Almoços)."
+              : "Acompanhe o painel de distribuição, contagem de hóspedes e controle de casas ativas (Hospedagens)."}
+          </p>
+        </div>
+
+        <div className="inline-flex bg-slate-200 p-1 rounded-xl self-start">
+          <button
+            onClick={() => setTipoVisualizacao("almoco")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tipoVisualizacao === "almoco"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
+              }`}
+          >
+            <Utensils className="w-4 h-4 text-emerald-600" /> Almoços
+          </button>
+          <button
+            onClick={() => setTipoVisualizacao("hospedagem")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tipoVisualizacao === "hospedagem"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
+              }`}
+          >
+            <Home className="w-4 h-4 text-purple-600" /> Hospedagens
+          </button>
+        </div>
       </div>
 
-      {/* Grid de Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard
           titulo="Total de Casas"
@@ -362,8 +370,8 @@ export default function Dashboard() {
         />
 
         <StatCard
-          titulo="Próximo Almoço"
-          valor={programacoes.length > 0 ? formatarDataCurta(programacoes[0].data) : "Não programado"}
+          titulo={tipoVisualizacao === "almoco" ? "Próximo Almoço" : "Próxima Hospedagem"}
+          valor={programacoesAtuais.length > 0 ? formatarDataCurta(programacoesAtuais[0].data) : "Não programado"}
           icone="📅"
           bgColorIcone="bg-indigo-50"
           textColorIcone="text-indigo-600"
@@ -371,8 +379,8 @@ export default function Dashboard() {
 
         <StatCard
           titulo="Casas Disponíveis"
-          valor={programacoes.length > 0
-            ? Math.max(0, totalCasas - new Set(programacoes.filter(p => p.data === programacoes[0].data && p.casaId).map(p => p.casaId)).size)
+          valor={programacoesAtuais.length > 0
+            ? Math.max(0, totalCasas - new Set(programacoesAtuais.filter(p => p.data === programacoesAtuais[0].data && p.casaId).map(p => p.casaId)).size)
             : totalCasas
           }
           icone="📍"
@@ -381,20 +389,22 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Título da seção de programações */}
       <div className="pt-4 border-t border-slate-200">
-        <h2 className="text-lg font-bold text-slate-800">Programações Definidas</h2>
-        <p className="text-xs text-slate-400">Distribuição completa de almoços agendados no sistema</p>
+        <h2 className="text-lg font-bold text-slate-800">
+          {tipoVisualizacao === "almoco" ? "Programações de Almoço Definidas" : "Programações de Hospedagem Definidas"}
+        </h2>
+        <p className="text-xs text-slate-400">
+          {tipoVisualizacao === "almoco" ? "Distribuição completa de almoços agendados" : "Distribuição completa de hospedagens agendadas"}
+        </p>
       </div>
 
-      {/* LISTA DOS DESTAQUES DE ALMOÇO AGRUPADOS */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 text-sm bg-white rounded-xl border border-slate-200">
-          Carregando registros de almoço...
+          Carregando registros...
         </div>
-      ) : programacoes.length > 0 ? (
+      ) : programacoesAtuais.length > 0 ? (
         <div className="space-y-6">
-          {programacoes.map((prog, idx) => {
+          {programacoesAtuais.map((prog, idx) => {
             const isPrimeira = idx === 0;
 
             return (
@@ -406,13 +416,13 @@ export default function Dashboard() {
                   }`}
               >
                 <div className="absolute right-0 bottom-0 opacity-5 translate-x-12 translate-y-12 select-none pointer-events-none">
-                  <span className="text-[180px]">🍽️</span>
+                  <span className="text-[180px]">{tipoVisualizacao === "almoco" ? "🍽️" : "🛏️"}</span>
                 </div>
 
                 <div className="relative z-10">
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     <span className="bg-slate-700/50 text-slate-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-slate-600/30">
-                      PROGRAMAÇÃO AGENDADA
+                      {tipoVisualizacao === "almoco" ? "ALMOÇO AGENDADO" : "HOSPEDAGEM AGENDADA"}
                     </span>
 
                     <span className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/20">
@@ -492,12 +502,15 @@ export default function Dashboard() {
 
                     <div className="lg:col-span-7 bg-white/5 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
                       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span>👥</span> Betelitas Escalados ({prog.participantesDetalhados.length})
+                        <span>👥</span> {tipoVisualizacao === "almoco" ? "Betelitas Escalados" : "Hóspedes Escalados"} ({prog.participantesDetalhados.length})
                       </h3>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {prog.participantesDetalhados.map((part, index) => {
-                          const statusInfo = obterStatusInfo(part.status);
+                          const statusInfo = tipoVisualizacao === "almoco"
+                            ? obterStatusInfoAlmoco(part.status)
+                            : obterStatusInfoHospedagem(part.status);
+
                           return (
                             <div
                               key={index}
@@ -529,7 +542,9 @@ export default function Dashboard() {
       ) : (
         <div className="p-12 text-center bg-white rounded-xl border border-slate-200">
           <p className="text-sm text-slate-400">
-            Nenhuma programação de almoço cadastrada no banco de dados.
+            {tipoVisualizacao === "almoco"
+              ? "Nenhuma programação de almoço cadastrada no banco de dados."
+              : "Nenhuma programação de hospedagem cadastrada no banco de dados."}
           </p>
         </div>
       )}

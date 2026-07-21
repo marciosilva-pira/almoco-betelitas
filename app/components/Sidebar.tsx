@@ -57,6 +57,11 @@ export default function Sidebar() {
               <span>Programações</span>
               <span>📅</span>
             </Link>
+            <Link href="/hospedagem" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/hospedagem")}`}>
+            <span>Hospedagem</span>
+              <span>🛏️</span>
+            </Link>
+
             <Link href="/estatisticas" className={`flex items-center justify-between p-3 rounded-lg ${isActive("/estatisticas")}`}>
               <span>Estatísticas</span>
               <span>📊</span>
@@ -67,8 +72,8 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-slate-800 shrink-0 mt-auto">
-        <button 
-          onClick={handleLogout} 
+        <button
+          onClick={handleLogout}
           className="w-full text-slate-400 p-3 text-sm hover:text-white bg-slate-800 rounded-lg"
         >
           🚪 Sair do Sistema
