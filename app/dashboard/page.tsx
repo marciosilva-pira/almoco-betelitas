@@ -1,5 +1,6 @@
 "use client";
 
+import { getAuth } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -36,6 +37,19 @@ export default function Dashboard() {
   const [menuTelefoneAberto, setMenuTelefoneAberto] = useState<string | null>(null);
 
   const limparTelefone = (tel: string) => tel.replace(/\D/g, "");
+
+  // ESTADO PARA SABER SE É ADMIN:
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Verifica se o usuário atual logado no Firebase é o administrador
+    const auth = getAuth();
+    const usuario = auth.currentUser;
+
+    if (usuario && usuario.email === "marciosilva.pira@gmail.com") {
+      setIsAdmin(true);
+    }
+  }, []);
 
   useEffect(() => {
     carregarDados();
@@ -150,7 +164,6 @@ export default function Dashboard() {
         const convidadosDoc = dados.convidadosAvulsos || [];
         const statusMap = dados.statusParticipantes || {};
 
-        // Junta IDs de betelitas e IDs de convidados avulsos para processar juntos
         const todosIds = [
           ...participantesDoc,
           ...convidadosDoc.map((c: any) => c.id)
@@ -173,9 +186,9 @@ export default function Dashboard() {
 
           const chaveAgrupamento = idProcurado ? `${dataAgendada}_${idProcurado}` : `particular_${doc.id}`;
           const casa = dicionarioCasas[idProcurado] || {};
-          
-          const casaNomeFamilia = idProcurado && casa.nomeFamilia 
-            ? casa.nomeFamilia 
+
+          const casaNomeFamilia = idProcurado && casa.nomeFamilia
+            ? casa.nomeFamilia
             : (idProcurado ? "Sem Nome" : "Almoço Particular");
 
           const logradouro = casa.logradouro || "";
@@ -339,8 +352,21 @@ export default function Dashboard() {
 
   const programacoesAtuais = tipoVisualizacao === "almoco" ? programacoesAlmoco : programacoesHospedagem;
 
+  // Função para enviar a mensagem via WhatsApp com o link embutido
+  const enviarMensagemWhatsApp = () => {
+    // Texto completo já incluindo o link
+    const mensagem = "*Programação de Almoço Definida!* 🍽️\n\nA programação de almoço já está disponível no sistema.\n\nConfira os detalhes no link abaixo:\nhttps://almoco-betelitas.vercel.app/";
+
+    // Formata o texto para a URL do WhatsApp
+    const mensagemFormatada = encodeURIComponent(mensagem);
+
+    // Abre o WhatsApp
+    window.open(`https://api.whatsapp.com/send?text=${mensagemFormatada}`, "_blank");
+  };
+
   return (
     <div className="p-8 max-w-7xl w-full mx-auto space-y-8">
+      {/* CABEÇALHO DA PÁGINA */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight font-sans">
@@ -353,28 +379,41 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="inline-flex bg-slate-200 p-1 rounded-xl self-start">
-          <button
-            onClick={() => setTipoVisualizacao("almoco")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tipoVisualizacao === "almoco"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900"
-              }`}
-          >
-            <Utensils className="w-4 h-4 text-emerald-600" /> Almoços
-          </button>
-          <button
-            onClick={() => setTipoVisualizacao("hospedagem")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tipoVisualizacao === "hospedagem"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900"
-              }`}
-          >
-            <Home className="w-4 h-4 text-purple-600" /> Hospedagens
-          </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* BOTÃO DO WHATSAPP - VISÍVEL APENAS PARA ADMINISTRADORES */}
+          {isAdmin && (
+            <button
+              onClick={enviarMensagemWhatsApp}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
+            >
+              <span>💬</span> Notificar Grupo no WhatsApp
+            </button>
+          )}
+
+          <div className="inline-flex bg-slate-200 p-1 rounded-xl self-start">
+            <button
+              onClick={() => setTipoVisualizacao("almoco")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tipoVisualizacao === "almoco"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
+                }`}
+            >
+              <Utensils className="w-4 h-4 text-emerald-600" /> Almoços
+            </button>
+            <button
+              onClick={() => setTipoVisualizacao("hospedagem")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${tipoVisualizacao === "hospedagem"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
+                }`}
+            >
+              <Home className="w-4 h-4 text-purple-600" /> Hospedagens
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* CARDS DE ESTATÍSTICA */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard
           titulo="Total de Casas"
