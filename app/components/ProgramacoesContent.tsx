@@ -114,7 +114,7 @@ export default function ProgramacoesPage() {
                     dados.convidadosAvulsos.forEach((conv: any) => {
                         listaConvidadosTemp.push({ ...conv, agendamentoId: documento.id });
                         mapaStatusConsolidados[conv.id] = conv.status || "vaiAlmocar";
-                        
+
                         // Garante que o convidado salvo também entre no mapa de alocações para exibir o botão corretamente
                         mapaAlocacoes[conv.id] = {
                             agendamentoId: documento.id,
@@ -127,7 +127,7 @@ export default function ProgramacoesPage() {
                 if (dados.participantes && Array.isArray(dados.participantes)) {
                     dados.participantes.forEach((betelitaId: string) => {
                         let casaNome = "";
-                        
+
                         if (casaEncontrada) {
                             casaNome = `Casa ${casaEncontrada.numeroCasa} — ${casaEncontrada.nomeFamilia}`;
                         } else {
@@ -175,7 +175,7 @@ export default function ProgramacoesPage() {
         setConvidadosDoDia(prev => [...prev, novoConvidadoObj]);
         // Define o status padrão inicial como "vaiAlmocar"
         setStatusParticipantes(prev => ({ ...prev, [novoId]: "vaiAlmocar" }));
-        
+
         // Limpa os campos do formulário de convidado
         setNomeConvidado("");
         setTelefoneConvidado("");
@@ -190,7 +190,7 @@ export default function ProgramacoesPage() {
             try {
                 const agendamentoRef = doc(db, "lunchSchedules", convidado.agendamentoId);
                 const snapshot = await getDocs(query(collection(db, "lunchSchedules")));
-                
+
                 let docData: any = null;
                 snapshot.forEach(d => {
                     if (d.id === convidado.agendamentoId) docData = d.data();
@@ -236,7 +236,7 @@ export default function ProgramacoesPage() {
         try {
             // Referência direta ao documento usando o ID mapeado
             const agendamentoRef = doc(db, "lunchSchedules", alocacao.agendamentoId);
-            
+
             // Busca o documento específico diretamente pelo ID (evita percorrer todos os registros)
             const snapshotDoc = await getDocs(query(collection(db, "lunchSchedules")));
             let agendamentoDoc: any = null;
@@ -265,14 +265,14 @@ export default function ProgramacoesPage() {
                         statusParticipantes: novosStatus
                     });
                 }
-                
+
                 // Atualiza os estados locais imediatamente
                 setAlocacoesNaData(prev => {
                     const copia = { ...prev };
                     delete copia[betelitaId];
                     return copia;
                 });
-                
+
                 buscarAgendamentosNaData(data);
             }
         } catch (error) {
@@ -294,8 +294,12 @@ export default function ProgramacoesPage() {
             return;
         }
 
+        // Listas para agrupar as pessoas por tipo
         const participantesDaCasaIds: string[] = [];
         const statusDaCasa: Record<string, string> = {};
+
+        const participantesSemCasaIds: string[] = [];
+        const statusSemCasa: Record<string, string> = {};
 
         const participantesAusentesIds: string[] = [];
         const statusAusentes: Record<string, string> = {};
@@ -311,7 +315,7 @@ export default function ProgramacoesPage() {
             return;
         }
 
-        // Separa betelitas normais e convidados novos
+        // Separa betelitas normais
         idsParaProcessar.forEach(id => {
             const status = statusParticipantes[id] || "naoComparecera";
 
@@ -320,38 +324,49 @@ export default function ProgramacoesPage() {
                     participantesAusentesIds.push(id);
                     statusAusentes[id] = status;
                 }
-            } else {
-                if (id.startsWith("convidado_")) {
-                    // Será tratado abaixo nos convidados novos
-                } else {
+            } else if (status === "vaiAlmocar" || status === "comparecerSemAlmoco") {
+                if (!id.startsWith("convidado_")) {
                     participantesDaCasaIds.push(id);
                     statusDaCasa[id] = status;
+                }
+            } else if (status === "comparecerParticular") {
+                if (!id.startsWith("convidado_")) {
+                    participantesSemCasaIds.push(id);
+                    statusSemCasa[id] = status;
                 }
             }
         });
 
-        // Trata os convidados avulsos novos
-        const convidadosNovosParaSalvar: any[] = [];
+        // Separadores de convidados avulsos novos
+        const convidadosParaCasa: any[] = [];
+        const convidadosParticulares: any[] = [];
+
         convidadosDoDia.forEach(conv => {
             if (!conv.agendamentoId) {
                 const statusConv = statusParticipantes[conv.id] || "vaiAlmocar";
-                // Se o convidado vai almoçar ou participar, ele entra na lista de convidados avulsos do documento
-                convidadosNovosParaSalvar.push({
+                const convObj = {
                     id: conv.id,
                     nome: conv.nome,
                     telefone: conv.telefone,
                     status: statusConv
-                });
-                statusDaCasa[conv.id] = statusConv;
+                };
+
+                if (statusConv === "comparecerParticular") {
+                    convidadosParticulares.push(convObj);
+                    statusSemCasa[conv.id] = statusConv;
+                } else if (statusConv !== "naoComparecera") {
+                    convidadosParaCasa.push(convObj);
+                    statusDaCasa[conv.id] = statusConv;
+                }
             }
         });
 
-        const temAlguemParaAlmocar = [...participantesDaCasaIds, ...convidadosNovosParaSalvar.map(c => c.id)].some(
-            id => statusDaCasa[id] === "vaiAlmocar" || statusDaCasa[id] === "comparecerSemAlmoco" || statusDaCasa[id] === "comparecerParticular"
-        );
+        // Validação: Só exige Casa se houver alguém configurado para comer na Casa ("vaiAlmocar")
+        const exigeCasa = participantesDaCasaIds.some(id => statusDaCasa[id] === "vaiAlmocar") ||
+                          convidadosParaCasa.some(c => c.status === "vaiAlmocar");
 
-        if (temAlguemParaAlmocar && !casaId) {
-            alert("Por favor, selecione a Casa que servirá o almoço, pois há participantes ou convidados escalados.");
+        if (exigeCasa && !casaId) {
+            alert("Por favor, selecione a Casa que servirá o almoço, pois há participantes escalados para almoçar.");
             return;
         }
 
@@ -359,23 +374,35 @@ export default function ProgramacoesPage() {
         if (!confirmar) return;
 
         try {
-            // GRAVAÇÃO 1: Grupo da Casa (Almoço / Participantes / Convidados)
-            if (participantesDaCasaIds.length > 0 || convidadosNovosParaSalvar.length > 0) {
+            // GRAVAÇÃO 1: Grupo da Casa Anfitriã (quem vai almoçar ou passar o dia na casa)
+            if (participantesDaCasaIds.length > 0 || convidadosParaCasa.length > 0) {
                 await addDoc(collection(db, "lunchSchedules"), {
                     data,
-                    casaId: casaId || "", 
+                    casaId: casaId || "",
                     participantes: participantesDaCasaIds,
-                    convidadosAvulsos: convidadosNovosParaSalvar,
+                    convidadosAvulsos: convidadosParaCasa,
                     statusParticipantes: statusDaCasa,
                     criadoEm: new Date().toISOString(),
                 });
             }
 
-            // GRAVAÇÃO 2: Ausentes
+            // GRAVAÇÃO 2: Grupo Arranjo Particular (não exige vínculo com nenhuma Casa)
+            if (participantesSemCasaIds.length > 0 || convidadosParticulares.length > 0) {
+                await addDoc(collection(db, "lunchSchedules"), {
+                    data,
+                    casaId: "",
+                    participantes: participantesSemCasaIds,
+                    convidadosAvulsos: convidadosParticulares,
+                    statusParticipantes: statusSemCasa,
+                    criadoEm: new Date().toISOString(),
+                });
+            }
+
+            // GRAVAÇÃO 3: Grupo dos Ausentes
             if (participantesAusentesIds.length > 0) {
                 await addDoc(collection(db, "lunchSchedules"), {
                     data,
-                    casaId: "", 
+                    casaId: "",
                     participantes: participantesAusentesIds,
                     statusParticipantes: statusAusentes,
                     criadoEm: new Date().toISOString(),
@@ -645,8 +672,8 @@ export default function ProgramacoesPage() {
                                                         type="button"
                                                         onClick={() => alterarStatus(item.id, "vaiAlmocar")}
                                                         className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "vaiAlmocar"
-                                                                ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
-                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                                                             }`}
                                                     >
                                                         🍽️ Almoça
@@ -656,8 +683,8 @@ export default function ProgramacoesPage() {
                                                         type="button"
                                                         onClick={() => alterarStatus(item.id, "comparecerSemAlmoco")}
                                                         className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "comparecerSemAlmoco"
-                                                                ? "bg-amber-500 border-amber-500 text-white shadow-sm"
-                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            ? "bg-amber-500 border-amber-500 text-white shadow-sm"
+                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                                                             }`}
                                                     >
                                                         🚶 Sem Almoço
@@ -667,8 +694,8 @@ export default function ProgramacoesPage() {
                                                         type="button"
                                                         onClick={() => alterarStatus(item.id, "comparecerParticular")}
                                                         className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "comparecerParticular"
-                                                                ? "bg-blue-600 border-blue-600 text-white shadow-sm"
-                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                                                             }`}
                                                     >
                                                         🥪 Part.
@@ -678,8 +705,8 @@ export default function ProgramacoesPage() {
                                                         type="button"
                                                         onClick={() => alterarStatus(item.id, "naoComparecera")}
                                                         className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all ${statusAtual === "naoComparecera"
-                                                                ? "bg-rose-600 border-rose-600 text-white shadow-sm"
-                                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            ? "bg-rose-600 border-rose-600 text-white shadow-sm"
+                                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                                                             }`}
                                                     >
                                                         ❌ Ausente
